@@ -51,6 +51,9 @@
       <div class="nav-item" onclick="switchSection('teams-eod', this)">
         <span class="nav-icon">◑</span> EOD Report
       </div>
+      <div class="nav-item" onclick="switchSection('all-reports', this)">
+        <span class="nav-icon">📋</span> All Reports
+      </div>
 
       <div class="nav-label">Overview</div>
       <div class="nav-item" onclick="switchSection('s1', this)">
@@ -130,6 +133,34 @@
             </div>
           </div>
           <div id="eod-form-container"></div>
+        </div>
+      </div>
+
+      <div id="all-reports" class="section">
+        <div class="section-header">
+          <div class="section-header-text">
+            <h2>All <span>Reports</span></h2>
+            <p>View daily EOD submissions and efficiency across all teams</p>
+          </div>
+        </div>
+        
+        <div class="card">
+          <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+              <thead style="background: rgba(26,26,26,0.95);">
+                <tr>
+                  <th style="padding: 10px; text-align: left; color: var(--text3); font-family: 'DM Mono'; font-size: 10px; text-transform: uppercase;">Date</th>
+                  <th style="padding: 10px; text-align: left; color: var(--text3); font-family: 'DM Mono'; font-size: 10px; text-transform: uppercase;">Member</th>
+                  <th style="padding: 10px; text-align: left; color: var(--text3); font-family: 'DM Mono'; font-size: 10px; text-transform: uppercase;">Team</th>
+                  <th style="padding: 10px; text-align: left; color: var(--cyan); font-family: 'DM Mono'; font-size: 10px; text-transform: uppercase;">Efficiency</th>
+                  <th style="padding: 10px; text-align: left; color: var(--text3); font-family: 'DM Mono'; font-size: 10px; text-transform: uppercase;">Calls</th>
+                  <th style="padding: 10px; text-align: left; color: var(--text3); font-family: 'DM Mono'; font-size: 10px; text-transform: uppercase;">Talk Time</th>
+                  <th style="padding: 10px; text-align: left; color: var(--text3); font-family: 'DM Mono'; font-size: 10px; text-transform: uppercase;">Blockers / Challenges</th>
+                </tr>
+              </thead>
+              <tbody id="all-reports-body"></tbody>
+            </table>
+          </div>
         </div>
       </div>
 
