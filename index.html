@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Skill in a Box · Sales Command Centre</title>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800;900&family=Barlow:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<div id="login-screen" class="login-wrapper">
+  <div class="login-card">
+    <div style="text-align: center; margin-bottom: 10px;">
+      <img src="logo.png" alt="Skill in a Box Logo" style="width: 180px; height: auto;" />
+    </div>
+    <div style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2.5px;color:var(--cyan);text-transform:uppercase; text-align: center; margin-bottom: 30px;">Sales Command Centre</div>
+    
+    <div class="form-group" style="margin-bottom: 15px;">
+      <label>Email Address</label>
+      <input type="email" id="login-email" placeholder="team@skillinabox.com" />
+    </div>
+    <div class="form-group" style="margin-bottom: 25px;">
+      <label>Password</label>
+      <input type="password" id="login-password" placeholder="••••••••" />
+    </div>
+    <button class="btn btn-accent" style="width: 100%; padding: 12px; font-size: 14px;" onclick="handleLogin()">Secure Login</button>
+    <div id="login-error" style="color: var(--red); font-size: 12px; text-align: center; margin-top: 15px; display: none;">Invalid email or password.</div>
+  </div>
+</div>
+
+<div class="app" id="main-app" style="display: none;">
+  <aside class="sidebar">
+    <div class="sidebar-logo" style="text-align: center; padding: 20px 18px 18px;">
+      <img src="logo.png" alt="Skill in a Box Logo" style="width: 140px; height: auto; margin-bottom: 10px;" />
+      <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2.5px;color:var(--cyan);text-transform:uppercase;">Sales Command Centre</div>
+    </div>
+
+    <div class="sidebar-date">
+      <div style="margin-bottom:5px;text-transform:uppercase;">Reporting Date</div>
+      <input type="date" id="report-date" />
+    </div>
+
+    <nav class="nav">
+      <div class="nav-label">Home</div>
+      <div class="nav-item active" onclick="switchSection('home-leaderboard', this)">
+        <span class="nav-icon">🏆</span> Leaderboard
+      </div>
+
+      <div class="nav-label">EOD Operations</div>
+      <div class="nav-item" onclick="switchSection('teams-eod', this)">
+        <span class="nav-icon">◑</span> Teams Dashboard
+      </div>
+
+      <div class="nav-label">Overview</div>
+      <div class="nav-item" onclick="switchSection('s1', this)">
+        <span class="nav-icon">◈</span> Daily Metrics
+      </div>
+
+      <div class="nav-label">Pipeline</div>
+      <div class="nav-item" onclick="switchSection('s2', this)">
+        <span class="nav-icon">⟁</span> Funnel Breakdown
+      </div>
+    </nav>
+
+    <div style="padding: 20px; margin-top: auto;">
+      <button class="btn" style="width: 100%; border-color: var(--border2);" onclick="handleLogout()">Sign Out</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <div class="topbar-title" id="topbar-title">Top Performers</div>
+        <div class="topbar-sub" id="topbar-sub">Live daily revenue and DRU leaderboard</div>
+      </div>
+      <div class="topbar-actions">
+        <span id="topbar-user" style="margin-right: 15px; font-weight: bold; color: var(--cyan);"></span>
+        <span id="topbar-date" style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text3);"></span>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <div id="home-leaderboard" class="section active">
+        <div class="section-header">
+          <div class="section-header-text">
+            <h2>Daily <span>Leaderboard</span></h2>
+            <p>Ranked by Total Revenue Collected Today</p>
+          </div>
+        </div>
+        
+        <div id="leaderboard-container"></div>
+      </div>
+
+      <div id="teams-eod" class="section">
+        <div id="eod-view-home">
+          <div class="section-header">
+            <div class="section-header-text">
+              <h2>Teams · <span>EOD</span></h2>
+              <p>Select your team to fill the End of Day report</p>
+            </div>
+          </div>
+          <div id="eod-team-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;"></div>
+        </div>
+
+        <div id="eod-view-team" style="display:none;">
+          <div class="section-header">
+            <div class="section-header-text">
+              <button onclick="eodGoHome()" class="btn btn-sm" style="margin-bottom:10px;">← Back to Teams</button>
+              <h2 id="eod-team-view-title">Team</h2>
+              <p id="eod-team-view-sub">Click a member to fill their EOD</p>
+            </div>
+          </div>
+          <div id="eod-member-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;margin-bottom:20px;"></div>
+          
+          <div class="card">
+            <div class="card-title">Add New Member</div>
+            <div class="form-grid" style="align-items: end;">
+              <div class="form-group"><label>Name</label><input type="text" id="new-member-name" placeholder="Enter name" /></div>
+              <button class="btn btn-accent" onclick="eodAddMember()">+ Add Member</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="eod-view-form" style="display:none;">
+          <div class="section-header">
+            <div class="section-header-text">
+              <button onclick="eodGoToTeam()" class="btn btn-sm" style="margin-bottom:10px;">← Back to Roster</button>
+              <h2 id="eod-form-title">Member EOD</h2>
+            </div>
+          </div>
+          <div id="eod-form-container"></div>
+        </div>
+      </div>
+
+      <div id="s1" class="section">
+        <div class="section-header">
+          <div class="section-header-text">
+            <h2>Daily <span>Metrics</span></h2>
+            <p>Track Daily Required Units (DRU) and Daily Punched Revenue (DPR) by team</p>
+          </div>
+        </div>
+
+        <div class="metric-grid" id="dru-summary"></div>
+
+        <div class="card card-accent-cyan">
+          <div class="card-title">Log DRU & DPR</div>
+          <div class="form-grid">
+            <div class="form-group"><label>Team</label><select id="dru-team"><option value="">Select Team</option></select></div>
+            <div class="form-group"><label>DRU (Target Units)</label><input type="number" id="dru-target" placeholder="e.g. 2" min="0" /></div>
+            <div class="form-group"><label>DRU (Achieved Units)</label><input type="number" id="dru-achieved" placeholder="e.g. 1" min="0" /></div>
+            <div class="form-group"><label>DPR (Target Revenue)</label><input type="number" id="dru-dpr-target" placeholder="₹" min="0" /></div>
+            <div class="form-group"><label>Revenue Collected</label><input type="number" id="dru-collected" placeholder="₹" min="0" /></div>
+          </div>
+          <button class="btn btn-accent" onclick="addDruLog()">+ Add Metric Log</button>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Daily Performance Log</div>
+          <p style="font-size:11px; color:var(--text3); margin-bottom:10px;">Click any status button to update the achieved numbers.</p>
+          <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+              <thead style="background: rgba(26,26,26,0.95);">
+                <tr>
+                  <th style="padding: 10px; text-align: left; color: var(--text3); font-family: 'DM Mono'; font-size: 10px; text-transform: uppercase;">Team</th>
+                  <th style="padding: 10px; text-align: left; color: var(--text3); font-family: 'DM Mono'; font-size: 10px; text-transform: uppercase;">DRU Target</th>
+                  <th style="padding: 10px; text-align: left; color: var(--cyan); font-family: 'DM Mono'; font-size: 10px; text-transform: uppercase;">DRU Achieved</th>
+                  <th style="padding: 10px; text-align: left; color: var(--text3); font-family: 'DM Mono'; font-size: 10px; text-transform: uppercase;">DPR Target</th>
+                  <th style="padding: 10px; text-align: left; color: var(--green); font-family: 'DM Mono'; font-size: 10px; text-transform: uppercase;">Collected</th>
+                  <th style="padding: 10px; text-align: left; color: var(--text3); font-family: 'DM Mono'; font-size: 10px; text-transform: uppercase;">Goal Status</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="dru-log-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div id="s2" class="section">
+        <div class="section-header">
+          <div class="section-header-text">
+            <h2>Funnel <span>Breakdown</span></h2>
+            <p>Section 2 · Visualise where pipeline drops off</p>
+          </div>
+        </div>
+
+        <div class="card card-accent-cyan">
+          <div class="card-title" style="color: var(--cyan);">Live Lead Pipeline (Auto-Synced from Teams)</div>
+          <p style="font-size:11px; color:var(--text3); margin-bottom:16px;">This data aggregates automatically when team members log leads in their EOD reports.</p>
+          <div class="metric-grid" id="auto-pipeline-stats"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Team-Wise Lead Performance</div>
+          <div style="overflow-x: auto; margin-bottom: 10px;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+              <thead style="background: rgba(26,26,26,0.95);">
+                <tr>
+                  <th style="padding: 10px; text-align: left; color: var(--text3); font-family: 'DM Mono'; font-size: 10px; text-transform: uppercase;">Team</th>
+                  <th style="padding: 10px; text-align: left; color: var(--cyan); font-family: 'DM Mono'; font-size: 10px; text-transform: uppercase;">Prospects Logged</th>
+                  <th style="padding: 10px; text-align: left; color: var(--amber); font-family: 'DM Mono'; font-size: 10px; text-transform: uppercase;">Follow-ups Logged</th>
+                  <th style="padding: 10px; text-align: left; color: var(--green); font-family: 'DM Mono'; font-size: 10px; text-transform: uppercase;">Done (Won)</th>
+                  <th style="padding: 10px; text-align: left; color: var(--red); font-family: 'DM Mono'; font-size: 10px; text-transform: uppercase;">Negative (Lost)</th>
+                </tr>
+              </thead>
+              <tbody id="team-wise-pipeline-body"></tbody>
+            </table>
+          </div>
+        </div>
+        
+        </div>
+    </div>
+  </main>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
