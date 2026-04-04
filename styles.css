@@ -180,8 +180,8 @@ body::before {
   width: 50px;
 }
 .rank-1 .rank-number { color: var(--amber); font-size: 48px; }
-.rank-2 .rank-number { color: #C0C0C0; } /* Silver */
-.rank-3 .rank-number { color: #CD7F32; } /* Bronze */
+.rank-2 .rank-number { color: #C0C0C0; } 
+.rank-3 .rank-number { color: #CD7F32; } 
 
 .rank-details { flex: 1; }
 .rank-name { font-size: 20px; font-weight: 700; color: var(--white); margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
