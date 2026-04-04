@@ -40,7 +40,7 @@ let eodData = {
 
 const SECTION_META = {
   'home-leaderboard': ['Top Performers', 'Live daily revenue and DRU leaderboard'],
-  'teams-eod': ['Teams Dashboard', 'Manage team rosters and efficiency tracking'],
+  'teams-eod': ['EOD Report', 'Manage team rosters and efficiency tracking'],
   's1': ['Daily Metrics', 'Track Daily Required Units (DRU) and Daily Punched Revenue (DPR)'],
   's2': ['Funnel Breakdown', 'Section 2 · Visualise pipeline drop off']
 };
@@ -79,14 +79,14 @@ function listenToFirebase() {
     snapshot.forEach((doc) => { globalLeads.push({ id: doc.id, ...doc.data() }); });
     if(document.getElementById('eod-view-team').style.display === 'block') eodRenderRoster();
     renderFunnel();
-    renderLeaderboard(); // Recalculate leaderboard
+    renderLeaderboard(); 
   });
 
   db.collection("druLogs").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
     druLogs = [];
     snapshot.forEach((doc) => { druLogs.push({ id: doc.id, ...doc.data() }); });
     renderDruLogs();
-    renderLeaderboard(); // Recalculate leaderboard based on revenue
+    renderLeaderboard(); 
   });
 }
 
@@ -108,10 +108,6 @@ function switchSection(id, el) {
 function renderLeaderboard() {
   const container = document.getElementById('leaderboard-container');
   if (!container) return;
-
-  // Aggregate stats from druLogs to get individual top performers by revenue
-  // Since DRU logs in this version don't specify the exact *member* who got the revenue (only the team),
-  // we will show the Top Teams on the Leaderboard.
   
   let teamStats = {};
   druLogs.forEach(log => {
@@ -150,8 +146,7 @@ function renderLeaderboard() {
   }).join('') + `</div>`;
 }
 
-// --- ALL OTHER EOD, METRICS, AND FUNNEL LOGIC REMAINS IDENTICAL ---
-
+// --- TAB 1: TEAMS EOD LOGIC ---
 function eodRenderHome() {
   const grid = document.getElementById('eod-team-grid');
   grid.innerHTML = eodData.teams.map(t => `
