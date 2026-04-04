@@ -17,8 +17,11 @@ let state = { funnel: [] };
 let extraTasks = []; 
 let revenueEntries = []; 
 let formLeads = []; 
+
+// Syncs with Firebase
 let globalLeads = []; 
 let druLogs = []; 
+let allReports = []; // NEW: Stores all EOD reports
 
 let currentFormState = { calls: '', tt: '', sched: '', done: '', followups: '', prospects: '', blockers: '' };
 
@@ -41,6 +44,7 @@ let eodData = {
 const SECTION_META = {
   'home-leaderboard': ['Top Performers', 'Live daily revenue and DRU leaderboard'],
   'teams-eod': ['EOD Report', 'Manage team rosters and efficiency tracking'],
+  'all-reports': ['All Reports', 'View daily EOD submissions across all teams'],
   's1': ['Daily Metrics', 'Track Daily Required Units (DRU) and Daily Punched Revenue (DPR)'],
   's2': ['Funnel Breakdown', 'Section 2 · Visualise pipeline drop off']
 };
@@ -74,6 +78,7 @@ function handleLogin() {
 function handleLogout() { auth.signOut(); }
 
 function listenToFirebase() {
+  // Leads Listener
   db.collection("globalLeads").onSnapshot((snapshot) => {
     globalLeads = [];
     snapshot.forEach((doc) => { globalLeads.push({ id: doc.id, ...doc.data() }); });
@@ -82,11 +87,19 @@ function listenToFirebase() {
     renderLeaderboard(); 
   });
 
+  // DRU Logs Listener
   db.collection("druLogs").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
     druLogs = [];
     snapshot.forEach((doc) => { druLogs.push({ id: doc.id, ...doc.data() }); });
     renderDruLogs();
     renderLeaderboard(); 
+  });
+
+  // NEW: All EOD Reports Listener
+  db.collection("eodReports").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
+    allReports = [];
+    snapshot.forEach((doc) => { allReports.push({ id: doc.id, ...doc.data() }); });
+    renderAllReports();
   });
 }
 
@@ -357,6 +370,7 @@ function calcEfficiency() {
   else { badgeHighly.textContent = '✗ Under 3.5hrs'; badgeHighly.style.background = 'rgba(232,64,64,0.1)'; badgeHighly.style.color = 'var(--red)'; document.getElementById('calc-pct').style.color = 'var(--white)'; }
 }
 
+// SUBMIT EOD TO FIREBASE (UPDATED FOR ALL REPORTS TAB)
 function submitFinalEOD() { 
   syncFormState(); 
   const prospectsClaimed = parseFloat(currentFormState.prospects) || 0; const followupsClaimed = parseFloat(currentFormState.followups) || 0;
@@ -375,12 +389,58 @@ function submitFinalEOD() {
     }
   }
 
+  // 1. Push specific leads for the CRM view
   formLeads.forEach(l => {
     if(l.name.trim() !== '') db.collection("globalLeads").add({ type: l.type, name: l.name, phone: l.phone, status: 'Pending', owner: eodData.activeMember, teamId: eodData.activeTeam.id, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
   });
   
+  // 2. NEW: Push full EOD report for the 'All Reports' tab
+  const calls = parseFloat(currentFormState.calls) || 0;
+  const talkTimeMins = parseFloat(currentFormState.tt) || 0;
+  const totalProductiveHours = (talkTimeMins / 60) + (extraTasks.reduce((sum, task) => sum + task.minutes, 0) / 60);
+  const efficiencyPct = Math.min((totalProductiveHours / 7) * 100, 100).toFixed(0);
+
+  db.collection("eodReports").add({
+    member: eodData.activeMember,
+    team: eodData.activeTeam.name,
+    teamIcon: eodData.activeTeam.icon,
+    date: document.getElementById('report-date').value,
+    calls: calls,
+    talkTime: talkTimeMins,
+    efficiency: efficiencyPct,
+    blockers: currentFormState.blockers,
+    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+  });
+
   formLeads = []; alert(`✅ ${eodData.activeMember}'s EOD submitted successfully!`); eodGoToTeam(); 
 }
+
+// --- NEW: ALL REPORTS TAB LOGIC ---
+function renderAllReports() {
+  const tbody = document.getElementById('all-reports-body');
+  if (!tbody) return;
+
+  if (allReports.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:20px; color:var(--text3);">No EOD reports submitted yet.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = allReports.map(r => {
+    let effColor = r.efficiency >= 50 ? 'var(--cyan)' : 'var(--white)'; // Highlights 50%+ (3.5+ hrs)
+    return `
+      <tr style="border-bottom: 1px solid var(--border);">
+        <td style="padding: 10px; color: var(--text2);">${r.date}</td>
+        <td style="padding: 10px; color: var(--white); font-weight: 500;">${r.member}</td>
+        <td style="padding: 10px; color: var(--text2);">${r.teamIcon} ${r.team}</td>
+        <td style="padding: 10px; color: ${effColor}; font-weight:bold;">${r.efficiency}%</td>
+        <td style="padding: 10px; color: var(--text2);">${r.calls}</td>
+        <td style="padding: 10px; color: var(--text2);">${r.talkTime}m</td>
+        <td style="padding: 10px; color: var(--text3); font-size: 11px; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${r.blockers || 'None'}">${r.blockers || '—'}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
 
 // --- TAB 2: DRU & DPR TRACKER ---
 function initDruForm() {
