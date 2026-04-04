@@ -49,7 +49,7 @@
 
       <div class="nav-label">EOD Operations</div>
       <div class="nav-item" onclick="switchSection('teams-eod', this)">
-        <span class="nav-icon">◑</span> Teams Dashboard
+        <span class="nav-icon">◑</span> EOD Report
       </div>
 
       <div class="nav-label">Overview</div>
@@ -89,7 +89,6 @@
             <p>Ranked by Total Revenue Collected Today</p>
           </div>
         </div>
-        
         <div id="leaderboard-container"></div>
       </div>
 
@@ -147,11 +146,26 @@
         <div class="card card-accent-cyan">
           <div class="card-title">Log DRU & DPR</div>
           <div class="form-grid">
-            <div class="form-group"><label>Team</label><select id="dru-team"><option value="">Select Team</option></select></div>
-            <div class="form-group"><label>DRU (Target Units)</label><input type="number" id="dru-target" placeholder="e.g. 2" min="0" /></div>
-            <div class="form-group"><label>DRU (Achieved Units)</label><input type="number" id="dru-achieved" placeholder="e.g. 1" min="0" /></div>
-            <div class="form-group"><label>DPR (Target Revenue)</label><input type="number" id="dru-dpr-target" placeholder="₹" min="0" /></div>
-            <div class="form-group"><label>Revenue Collected</label><input type="number" id="dru-collected" placeholder="₹" min="0" /></div>
+            <div class="form-group">
+              <label>Team</label>
+              <select id="dru-team"><option value="">Select Team</option></select>
+            </div>
+            <div class="form-group">
+              <label>DRU (Target Units)</label>
+              <input type="number" id="dru-target" placeholder="e.g. 2" min="0" />
+            </div>
+            <div class="form-group">
+              <label>DRU (Achieved Units)</label>
+              <input type="number" id="dru-achieved" placeholder="e.g. 1" min="0" />
+            </div>
+            <div class="form-group">
+              <label>DPR (Target Revenue)</label>
+              <input type="number" id="dru-dpr-target" placeholder="₹" min="0" />
+            </div>
+            <div class="form-group">
+              <label>Revenue Collected</label>
+              <input type="number" id="dru-collected" placeholder="₹" min="0" />
+            </div>
           </div>
           <button class="btn btn-accent" onclick="addDruLog()">+ Add Metric Log</button>
         </div>
@@ -209,8 +223,41 @@
             </table>
           </div>
         </div>
-        
+
+        <div class="card" style="border-left: 3px solid var(--orange);">
+          <div class="card-title">Manual Pipeline Visualisation</div>
+          <div id="funnel-vis"></div>
         </div>
+
+        <div class="card">
+          <div class="card-title">Manual Stage Data</div>
+          <div style="overflow-x: auto; margin-bottom: 20px;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+              <thead style="background: rgba(26,26,26,0.95);">
+                <tr>
+                  <th style="padding: 10px; text-align: left; color: var(--text3); font-family: 'DM Mono'; font-size: 10px; text-transform: uppercase;">Stage</th>
+                  <th style="padding: 10px; text-align: left; color: var(--text3); font-family: 'DM Mono'; font-size: 10px; text-transform: uppercase;">Count</th>
+                  <th style="padding: 10px; text-align: left; color: var(--text3); font-family: 'DM Mono'; font-size: 10px; text-transform: uppercase;">Drop %</th>
+                  <th style="padding: 10px; text-align: left; color: var(--text3); font-family: 'DM Mono'; font-size: 10px; text-transform: uppercase;">Issue Flagged</th>
+                  <th style="padding: 10px; text-align: left; color: var(--text3); font-family: 'DM Mono'; font-size: 10px; text-transform: uppercase;">Owner</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="funnel-body"></tbody>
+            </table>
+          </div>
+
+          <div style="border-top: 1px solid var(--border); margin: 20px 0; padding-top: 14px; color: var(--text3); font-size: 10px; font-family: 'DM Mono'; text-transform: uppercase; letter-spacing: 1px;">Add Stage Manually</div>
+          <div class="form-grid">
+            <div class="form-group"><label>Stage Name</label><input type="text" id="f-stage" placeholder="e.g. Connected" /></div>
+            <div class="form-group"><label>Count</label><input type="number" id="f-count" placeholder="0" min="0" /></div>
+            <div class="form-group"><label>Issue</label><input type="text" id="f-issue" placeholder="e.g. Low pick-up rate" /></div>
+            <div class="form-group"><label>Owner</label><input type="text" id="f-owner" placeholder="Name" /></div>
+          </div>
+          <button class="btn btn-accent" onclick="addFunnelRow()">+ Add Pipeline Stage</button>
+        </div>
+      </div>
+
     </div>
   </main>
 </div>
@@ -218,6 +265,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
+
 <script src="app.js"></script>
 </body>
 </html>
