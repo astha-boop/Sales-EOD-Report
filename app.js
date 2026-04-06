@@ -24,10 +24,6 @@ let druLogs = [];
 let allReports = []; 
 let tatLogs = []; 
 
-// Calendar Navigation States
-let currentReportsCalDate = new Date(); 
-let currentFunnelCalDate = new Date(); 
-
 let currentFormState = { calls: '', tt: '', sched: '', done: '', followups: '', prospects: '', blockers: '' };
 
 let eodData = {
@@ -74,6 +70,7 @@ const SECTION_META = {
 document.addEventListener('DOMContentLoaded', () => {
   setMasterDate(new Date().toISOString().split('T')[0]);
   
+  // Listen for Sidebar Date Picker changes
   document.getElementById('report-date').addEventListener('change', (e) => {
     setMasterDate(e.target.value);
   });
@@ -104,7 +101,11 @@ function handleLogin() {
 function handleLogout() { auth.signOut(); }
 
 function setMasterDate(dateStr) {
+  // Sync all date pickers on the screen
   document.getElementById('report-date').value = dateStr;
+  document.getElementById('reports-date-filter').value = dateStr;
+  document.getElementById('funnel-date-filter').value = dateStr;
+
   const selectedDateObj = new Date(dateStr);
   document.getElementById('topbar-date').textContent = selectedDateObj.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   state.funnel = []; 
@@ -113,8 +114,6 @@ function setMasterDate(dateStr) {
 
 function jumpToToday() {
   setMasterDate(new Date().toISOString().split('T')[0]);
-  currentReportsCalDate = new Date();
-  currentFunnelCalDate = new Date();
   refreshAllViews();
 }
 
@@ -170,9 +169,7 @@ function refreshAllViews() {
   if(document.getElementById('eod-view-team').style.display === 'block') eodRenderRoster();
   renderLeaderboard(); 
   renderDruLogs();
-  renderReportsCalendar();
   renderAllReports();
-  renderFunnelCalendar();
   renderFunnel();
   renderTatLogs(); 
   renderBlockers(); 
@@ -261,7 +258,6 @@ function renderInsights() {
   `;
 }
 
-
 // --- BLOCKERS VIEW ---
 function renderBlockers() {
   const tbody = document.getElementById('blockers-body');
@@ -285,7 +281,6 @@ function renderBlockers() {
     `;
   }).join('');
 }
-
 
 // --- LEADERBOARD ---
 function renderLeaderboard() {
@@ -633,53 +628,23 @@ function submitFinalEOD() {
   formLeads = []; alert(`✅ ${eodData.activeMember}'s EOD submitted successfully for ${selectedDate}!`); eodGoToTeam(); 
 }
 
-// --- ALL REPORTS TAB (W/ NEON BLINK) ---
-function renderReportsCalendar() {
-  const grid = document.getElementById('reports-calendar-grid');
-  const monthYear = document.getElementById('reports-calendar-month-year');
-  if (!grid || !monthYear) return;
-
-  const year = currentReportsCalDate.getFullYear();
-  const month = currentReportsCalDate.getMonth();
-  const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-  monthYear.textContent = `${monthNames[month]} ${year}`;
-
-  const firstDay = new Date(year, month, 1).getDay();
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const masterDate = document.getElementById('report-date').value;
-
-  let html = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => `<div class="cal-day-header">${d}</div>`).join('');
-  for (let i = 0; i < firstDay; i++) html += `<div class="cal-day empty"></div>`;
-
-  for (let i = 1; i <= daysInMonth; i++) {
-    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
-    const hasData = allReports.some(r => r.date === dateStr);
-    const dotHtml = hasData ? `<div class="cal-dot"></div>` : '';
-    const isActive = masterDate === dateStr ? 'active' : '';
-
-    html += `<div class="cal-day ${isActive}" onclick="setMasterDate('${dateStr}')">${i}${dotHtml}</div>`;
-  }
-  grid.innerHTML = html;
-}
-
-function changeReportsMonth(offset) {
-  currentReportsCalDate.setMonth(currentReportsCalDate.getMonth() + offset);
-  renderReportsCalendar();
-}
-
+// --- ALL REPORTS TAB (NEON BLINK) ---
 function renderAllReports() {
   const tbody = document.getElementById('all-reports-body');
+  const title = document.getElementById('reports-table-title');
   if (!tbody) return;
 
   const selectedDate = document.getElementById('report-date').value;
   const dailyReports = allReports.filter(r => r.date === selectedDate);
+  const dateObj = new Date(selectedDate);
+  
+  title.innerHTML = `Reports for <span style="color:var(--cyan);">${dateObj.toLocaleDateString('en-IN', {day:'numeric', month:'short', year:'numeric'})}</span>`;
 
   if (dailyReports.length === 0) {
     tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:20px; color:var(--text3);">No EOD reports submitted on ${selectedDate}.</td></tr>`;
     return;
   }
 
-  // Find max and min efficiency for neon highlight
   const efficiencies = dailyReports.map(r => parseFloat(r.efficiency));
   const maxEff = Math.max(...efficiencies);
   const minEff = Math.min(...efficiencies);
@@ -866,40 +831,7 @@ function renderTatLogs() {
   }).join('');
 }
 
-// --- TAB 3: FUNNEL BREAKDOWN W/ CALENDAR ---
-function renderFunnelCalendar() {
-  const grid = document.getElementById('funnel-calendar-grid');
-  const monthYear = document.getElementById('funnel-calendar-month-year');
-  if (!grid || !monthYear) return;
-
-  const year = currentFunnelCalDate.getFullYear();
-  const month = currentFunnelCalDate.getMonth();
-  const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-  monthYear.textContent = `${monthNames[month]} ${year}`;
-
-  const firstDay = new Date(year, month, 1).getDay();
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const masterDate = document.getElementById('report-date').value;
-
-  let html = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => `<div class="cal-day-header">${d}</div>`).join('');
-  for (let i = 0; i < firstDay; i++) html += `<div class="cal-day empty"></div>`;
-
-  for (let i = 1; i <= daysInMonth; i++) {
-    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
-    const hasData = globalLeads.some(r => r.date === dateStr);
-    const dotHtml = hasData ? `<div class="cal-dot"></div>` : '';
-    const isActive = masterDate === dateStr ? 'active' : '';
-
-    html += `<div class="cal-day ${isActive}" onclick="setMasterDate('${dateStr}')">${i}${dotHtml}</div>`;
-  }
-  grid.innerHTML = html;
-}
-
-function changeFunnelMonth(offset) {
-  currentFunnelCalDate.setMonth(currentFunnelCalDate.getMonth() + offset);
-  renderFunnelCalendar();
-}
-
+// --- TAB 3: FUNNEL BREAKDOWN ---
 function renderFunnel() {
   const autoContainer = document.getElementById('auto-pipeline-stats');
   const title = document.getElementById('pipeline-title');
