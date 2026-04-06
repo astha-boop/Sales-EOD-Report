@@ -23,9 +23,9 @@ let globalLeads = [];
 let druLogs = []; 
 let allReports = []; 
 
-// Calendar State
-let currentCalDate = new Date(); 
-let selectedFilterDate = null; 
+// Calendar Navigation States
+let currentReportsCalDate = new Date(); 
+let currentFunnelCalDate = new Date(); 
 
 let currentFormState = { calls: '', tt: '', sched: '', done: '', followups: '', prospects: '', blockers: '' };
 
@@ -54,16 +54,12 @@ const SECTION_META = {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Set date to today on load
-  document.getElementById('report-date').value = new Date().toISOString().split('T')[0];
-  document.getElementById('topbar-date').textContent = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  // Set Master Date to today on load
+  setMasterDate(new Date().toISOString().split('T')[0]);
   
-  // Listen for date picker changes to "Time Travel"
-  document.getElementById('report-date').addEventListener('change', () => {
-    const selectedDateObj = new Date(document.getElementById('report-date').value);
-    document.getElementById('topbar-date').textContent = selectedDateObj.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-    state.funnel = []; 
-    refreshAllViews();
+  // Listen for Sidebar Date Picker changes
+  document.getElementById('report-date').addEventListener('change', (e) => {
+    setMasterDate(e.target.value);
   });
 
   auth.onAuthStateChanged((user) => {
@@ -90,6 +86,24 @@ function handleLogin() {
 }
 function handleLogout() { auth.signOut(); }
 
+// --- UNIFIED TIME TRAVEL ---
+function setMasterDate(dateStr) {
+  document.getElementById('report-date').value = dateStr;
+  const selectedDateObj = new Date(dateStr);
+  document.getElementById('topbar-date').textContent = selectedDateObj.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  state.funnel = []; 
+  refreshAllViews();
+}
+
+function jumpToToday() {
+  setMasterDate(new Date().toISOString().split('T')[0]);
+  
+  // Reset Calendar Views to Current Month
+  currentReportsCalDate = new Date();
+  currentFunnelCalDate = new Date();
+  refreshAllViews();
+}
+
 function listenToFirebase() {
   db.collection("globalLeads").onSnapshot((snapshot) => {
     globalLeads = [];
@@ -106,17 +120,18 @@ function listenToFirebase() {
   db.collection("eodReports").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
     allReports = [];
     snapshot.forEach((doc) => { allReports.push({ id: doc.id, ...doc.data() }); });
-    renderCalendar();
-    renderAllReports();
+    refreshAllViews();
   });
 }
 
-// Master refresh function to update everything at once
 function refreshAllViews() {
   if(document.getElementById('eod-view-team').style.display === 'block') eodRenderRoster();
-  renderFunnel();
   renderLeaderboard(); 
   renderDruLogs();
+  renderReportsCalendar();
+  renderAllReports();
+  renderFunnelCalendar();
+  renderFunnel();
 }
 
 function getNum(id) { return parseFloat(document.getElementById(id)?.value) || 0; }
@@ -448,81 +463,57 @@ function submitFinalEOD() {
   formLeads = []; alert(`✅ ${eodData.activeMember}'s EOD submitted successfully for ${selectedDate}!`); eodGoToTeam(); 
 }
 
-// --- ALL REPORTS TAB W/ CALENDAR LOGIC ---
-function renderCalendar() {
-  const grid = document.getElementById('calendar-grid');
-  const monthYear = document.getElementById('calendar-month-year');
+// --- ALL REPORTS TAB ---
+function renderReportsCalendar() {
+  const grid = document.getElementById('reports-calendar-grid');
+  const monthYear = document.getElementById('reports-calendar-month-year');
   if (!grid || !monthYear) return;
 
-  const year = currentCalDate.getFullYear();
-  const month = currentCalDate.getMonth();
-
+  const year = currentReportsCalDate.getFullYear();
+  const month = currentReportsCalDate.getMonth();
   const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
   monthYear.textContent = `${monthNames[month]} ${year}`;
 
   const firstDay = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const masterDate = document.getElementById('report-date').value;
 
-  const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  let html = daysOfWeek.map(d => `<div class="cal-day-header">${d}</div>`).join('');
-
-  for (let i = 0; i < firstDay; i++) {
-    html += `<div class="cal-day empty"></div>`;
-  }
+  let html = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => `<div class="cal-day-header">${d}</div>`).join('');
+  for (let i = 0; i < firstDay; i++) html += `<div class="cal-day empty"></div>`;
 
   for (let i = 1; i <= daysInMonth; i++) {
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
-    const hasReports = allReports.some(r => r.date === dateStr);
-    const dotHtml = hasReports ? `<div class="cal-dot"></div>` : '';
-    const isActive = selectedFilterDate === dateStr ? 'active' : '';
+    const hasData = allReports.some(r => r.date === dateStr);
+    const dotHtml = hasData ? `<div class="cal-dot"></div>` : '';
+    const isActive = masterDate === dateStr ? 'active' : '';
 
-    html += `<div class="cal-day ${isActive}" onclick="filterReportsByDate('${dateStr}')">${i}${dotHtml}</div>`;
+    html += `<div class="cal-day ${isActive}" onclick="setMasterDate('${dateStr}')">${i}${dotHtml}</div>`;
   }
-
   grid.innerHTML = html;
 }
 
-function changeMonth(offset) {
-  currentCalDate.setMonth(currentCalDate.getMonth() + offset);
-  renderCalendar();
-}
-
-function filterReportsByDate(dateStr) {
-  selectedFilterDate = dateStr;
-  renderCalendar(); 
-  renderAllReports(); 
-}
-
-function clearDateFilter() {
-  selectedFilterDate = null;
-  renderCalendar();
-  renderAllReports();
+function changeReportsMonth(offset) {
+  currentReportsCalDate.setMonth(currentReportsCalDate.getMonth() + offset);
+  renderReportsCalendar();
 }
 
 function renderAllReports() {
   const tbody = document.getElementById('all-reports-body');
   const title = document.getElementById('reports-table-title');
-  const clearBtn = document.getElementById('clear-filter-btn');
   if (!tbody) return;
 
-  let displayReports = allReports;
+  const selectedDate = document.getElementById('report-date').value;
+  const dailyReports = allReports.filter(r => r.date === selectedDate);
+  const dateObj = new Date(selectedDate);
+  
+  title.innerHTML = `Reports for <span style="color:var(--cyan);">${dateObj.toLocaleDateString('en-IN', {day:'numeric', month:'short', year:'numeric'})}</span>`;
 
-  if (selectedFilterDate) {
-    displayReports = allReports.filter(r => r.date === selectedFilterDate);
-    const dateObj = new Date(selectedFilterDate);
-    title.innerHTML = `Reports for <span style="color:var(--cyan);">${dateObj.toLocaleDateString('en-IN', {day:'numeric', month:'short'})}</span>`;
-    clearBtn.style.display = 'block';
-  } else {
-    title.textContent = 'All Reports (Latest First)';
-    clearBtn.style.display = 'none';
-  }
-
-  if (displayReports.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:20px; color:var(--text3);">No EOD reports ${selectedFilterDate ? 'on this date' : 'submitted yet'}.</td></tr>`;
+  if (dailyReports.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:20px; color:var(--text3);">No EOD reports submitted on ${selectedDate}.</td></tr>`;
     return;
   }
 
-  tbody.innerHTML = displayReports.map(r => {
+  tbody.innerHTML = dailyReports.map(r => {
     let effColor = r.efficiency >= 50 ? 'var(--cyan)' : 'var(--white)';
     return `
       <tr style="border-bottom: 1px solid var(--border);">
@@ -597,11 +588,48 @@ function renderDruLogs() {
   }).join('');
 }
 
-// --- TAB 3: FUNNEL BREAKDOWN ---
+// --- TAB 3: FUNNEL BREAKDOWN W/ CALENDAR ---
+function renderFunnelCalendar() {
+  const grid = document.getElementById('funnel-calendar-grid');
+  const monthYear = document.getElementById('funnel-calendar-month-year');
+  if (!grid || !monthYear) return;
+
+  const year = currentFunnelCalDate.getFullYear();
+  const month = currentFunnelCalDate.getMonth();
+  const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  monthYear.textContent = `${monthNames[month]} ${year}`;
+
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const masterDate = document.getElementById('report-date').value;
+
+  let html = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => `<div class="cal-day-header">${d}</div>`).join('');
+  for (let i = 0; i < firstDay; i++) html += `<div class="cal-day empty"></div>`;
+
+  for (let i = 1; i <= daysInMonth; i++) {
+    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+    const hasData = globalLeads.some(r => r.date === dateStr);
+    const dotHtml = hasData ? `<div class="cal-dot"></div>` : '';
+    const isActive = masterDate === dateStr ? 'active' : '';
+
+    html += `<div class="cal-day ${isActive}" onclick="setMasterDate('${dateStr}')">${i}${dotHtml}</div>`;
+  }
+  grid.innerHTML = html;
+}
+
+function changeFunnelMonth(offset) {
+  currentFunnelCalDate.setMonth(currentFunnelCalDate.getMonth() + offset);
+  renderFunnelCalendar();
+}
+
 function renderFunnel() {
   const autoContainer = document.getElementById('auto-pipeline-stats');
+  const title = document.getElementById('pipeline-title');
   const selectedDate = document.getElementById('report-date').value;
+  const dateObj = new Date(selectedDate);
   const dailyLeads = globalLeads.filter(log => log.date === selectedDate);
+
+  if (title) title.innerHTML = `Live Lead Pipeline for <span style="color:var(--white);">${dateObj.toLocaleDateString('en-IN', {day:'numeric', month:'short'})}</span>`;
 
   const tPros = dailyLeads.filter(l => l.type === 'Prospect').length; 
   const tFol = dailyLeads.filter(l => l.type === 'Follow-up').length; 
@@ -614,7 +642,7 @@ function renderFunnel() {
 
   const teamTable = document.getElementById('team-wise-pipeline-body');
   if (teamTable) {
-    if (dailyLeads.length === 0) teamTable.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:20px; color:var(--text3);">No leads logged for ${selectedDate}.</td></tr>`;
+    if (dailyLeads.length === 0) teamTable.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:20px; color:var(--text3);">No leads logged on ${selectedDate}.</td></tr>`;
     else teamTable.innerHTML = eodData.teams.map(t => {
       const lds = dailyLeads.filter(l => l.teamId === t.id); if(lds.length === 0) return '';
       return `<tr style="border-bottom: 1px solid var(--border);"><td style="padding: 10px; color: var(--white); font-weight: 600;"><span style="margin-right:5px;">${t.icon}</span>${t.name}</td><td style="padding: 10px; color: var(--cyan); font-weight:bold;">${lds.filter(l => l.type === 'Prospect').length}</td><td style="padding: 10px; color: var(--amber); font-weight:bold;">${lds.filter(l => l.type === 'Follow-up').length}</td><td style="padding: 10px; color: var(--green); font-weight:bold;">${lds.filter(l => l.status === 'Done').length}</td><td style="padding: 10px; color: var(--red); font-weight:bold;">${lds.filter(l => l.status === 'Negative').length}</td></tr>`;
