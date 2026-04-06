@@ -111,8 +111,7 @@
             <p>Automated analysis of today's TAT compliance, efficiency, and team blockers</p>
           </div>
         </div>
-        <div id="insights-content">
-          </div>
+        <div id="insights-content"></div>
       </div>
 
       <div id="teams-eod" class="section">
@@ -127,22 +126,42 @@
         </div>
 
         <div id="eod-view-team" style="display:none;">
-          <div class="section-header">
+          <div class="section-header" style="display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 10px;">
             <div class="section-header-text">
               <button onclick="eodGoHome()" class="btn btn-sm" style="margin-bottom:10px;">← Back to Teams</button>
               <h2 id="eod-team-view-title">Team</h2>
               <p id="eod-team-view-sub">Click a member to fill their EOD</p>
             </div>
-          </div>
-          <div id="eod-member-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;margin-bottom:20px;"></div>
-          
-          <div class="card">
-            <div class="card-title">Add New Member</div>
-            <div class="form-grid" style="align-items: end;">
-              <div class="form-group"><label>Name</label><input type="text" id="new-member-name" placeholder="Enter name" /></div>
-              <button class="btn btn-accent" onclick="eodAddMember()">+ Add Member</button>
+            
+            <div style="display: flex; gap: 8px; align-items: center; background: var(--bg3); padding: 10px; border-radius: var(--radius); border: 1px solid var(--border);">
+              <input type="text" id="new-member-name" placeholder="New member name" style="background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 6px 10px; border-radius: 4px; font-size: 12px; outline: none; width: 150px;" />
+              <button class="btn btn-accent" onclick="eodAddMember()" style="padding: 6px 12px; white-space: nowrap;">+ Add Member</button>
             </div>
           </div>
+
+          <div id="eod-member-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;margin-bottom:30px;"></div>
+          
+          <div class="card card-accent-orange" style="margin-top: 20px;">
+            <div class="card-title">Team Backlog (All Pending Leads)</div>
+            <p style="font-size:11px; color:var(--text3); margin-bottom:16px;">These are leads that have not yet been marked as Done or Negative. Clear them out here or in the daily EOD.</p>
+            <div style="overflow-x: auto;">
+              <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                <thead style="background: rgba(26,26,26,0.95);">
+                  <tr>
+                    <th style="padding: 10px; text-align: left; color: var(--text3); font-family: 'DM Mono'; font-size: 10px; text-transform: uppercase;">Date Logged</th>
+                    <th style="padding: 10px; text-align: left; color: var(--text3); font-family: 'DM Mono'; font-size: 10px; text-transform: uppercase;">Rep</th>
+                    <th style="padding: 10px; text-align: left; color: var(--text3); font-family: 'DM Mono'; font-size: 10px; text-transform: uppercase;">Lead Name</th>
+                    <th style="padding: 10px; text-align: left; color: var(--text3); font-family: 'DM Mono'; font-size: 10px; text-transform: uppercase;">Phone</th>
+                    <th style="padding: 10px; text-align: left; color: var(--text3); font-family: 'DM Mono'; font-size: 10px; text-transform: uppercase;">Type</th>
+                    <th style="padding: 10px; text-align: left; color: var(--amber); font-family: 'DM Mono'; font-size: 10px; text-transform: uppercase;">Status</th>
+                    <th style="padding: 10px; text-align: left; color: var(--text3); font-family: 'DM Mono'; font-size: 10px; text-transform: uppercase;">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="team-pending-leads-body"></tbody>
+              </table>
+            </div>
+          </div>
+
         </div>
 
         <div id="eod-view-form" style="display:none;">
