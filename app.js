@@ -97,29 +97,50 @@ function setMasterDate(dateStr) {
 
 function jumpToToday() {
   setMasterDate(new Date().toISOString().split('T')[0]);
-  
-  // Reset Calendar Views to Current Month
   currentReportsCalDate = new Date();
   currentFunnelCalDate = new Date();
   refreshAllViews();
 }
 
+// --- FIREBASE LISTENERS WITH LEGACY DATA RESURRECTOR ---
 function listenToFirebase() {
   db.collection("globalLeads").onSnapshot((snapshot) => {
     globalLeads = [];
-    snapshot.forEach((doc) => { globalLeads.push({ id: doc.id, ...doc.data() }); });
+    snapshot.forEach((doc) => { 
+      let data = doc.data();
+      // FIX: If old data is missing a date, extract it from Firebase's hidden timestamp
+      if (!data.date && data.timestamp) {
+        const d = data.timestamp.toDate();
+        data.date = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+      }
+      globalLeads.push({ id: doc.id, ...data }); 
+    });
     refreshAllViews();
   });
 
   db.collection("druLogs").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
     druLogs = [];
-    snapshot.forEach((doc) => { druLogs.push({ id: doc.id, ...doc.data() }); });
+    snapshot.forEach((doc) => { 
+      let data = doc.data();
+      if (!data.date && data.timestamp) {
+        const d = data.timestamp.toDate();
+        data.date = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+      }
+      druLogs.push({ id: doc.id, ...data }); 
+    });
     refreshAllViews();
   });
 
   db.collection("eodReports").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
     allReports = [];
-    snapshot.forEach((doc) => { allReports.push({ id: doc.id, ...doc.data() }); });
+    snapshot.forEach((doc) => { 
+      let data = doc.data();
+      if (!data.date && data.timestamp) {
+        const d = data.timestamp.toDate();
+        data.date = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+      }
+      allReports.push({ id: doc.id, ...data }); 
+    });
     refreshAllViews();
   });
 }
@@ -168,7 +189,7 @@ function renderLeaderboard() {
   let sortedTeams = Object.values(teamStats).sort((a, b) => b.revenue - a.revenue);
 
   if (sortedTeams.length === 0) {
-    container.innerHTML = `<div style="text-align:center; color:var(--text3); padding:40px;">No revenue logged for ${selectedDate}. EOD operations will populate the leaderboard.</div>`;
+    container.innerHTML = `<div style="text-align:center; color:var(--text3); padding:40px;">No revenue logged for ${selectedDate}.</div>`;
     return;
   }
 
@@ -231,8 +252,12 @@ function eodRenderRoster() {
   const selectedDate = document.getElementById('report-date').value; 
 
   grid.innerHTML = eodData.activeTeam.members.map(m => {
-    // Filter leads by owner, team, AND date
-    const memberLeads = globalLeads.filter(l => l.owner === m && l.teamId === eodData.activeTeam.id && l.date === selectedDate);
+    // FIX: Show leads that are still Pending OR were created on the selected date
+    const memberLeads = globalLeads.filter(l => 
+      l.owner === m && 
+      l.teamId === eodData.activeTeam.id && 
+      (l.status === 'Pending' || l.date === selectedDate)
+    );
     
     let leadsHTML = memberLeads.map(l => {
       let statusColor = l.status === 'Done' ? 'var(--green)' : l.status === 'Negative' ? 'var(--red)' : 'var(--amber)';
