@@ -22,6 +22,7 @@ let formLeads = [];
 let globalLeads = []; 
 let druLogs = []; 
 let allReports = []; 
+let tatLogs = []; // NEW: TAT Data
 
 // Calendar Navigation States
 let currentReportsCalDate = new Date(); 
@@ -45,19 +46,33 @@ let eodData = {
   ]
 };
 
+// NEW: Hardcoded TAT Benchmarks from Framework
+const TAT_BENCHMARKS = {
+  'Lead Assignment': { max: 10, unit: 'mins' },
+  'First Call Attempt': { max: 30, unit: 'mins' },
+  'Inbound Lead Response': { max: 5, unit: 'mins' },
+  'Follow-Up (Post First Call)': { max: 24, unit: 'hrs' },
+  'Interested Lead Follow-Up': { max: 48, unit: 'hrs' },
+  'Demo Scheduling': { max: 24, unit: 'hrs' },
+  'Demo Completion': { max: 48, unit: 'hrs' },
+  'Post-Demo Follow-Up': { max: 24, unit: 'hrs' },
+  'Payment Link Sharing': { max: 10, unit: 'mins' },
+  'Payment Acknowledgment': { max: 15, unit: 'mins' },
+  'CRM Update': { max: 4, unit: 'hrs' }
+};
+
 const SECTION_META = {
   'home-leaderboard': ['Top Performers', 'Live daily revenue and DRU leaderboard'],
   'teams-eod': ['EOD Report', 'Manage team rosters and efficiency tracking'],
   'all-reports': ['All Reports', 'View daily EOD submissions across all teams'],
+  'tat-tracker': ['TAT Tracker', 'Monitor Turnaround Time SLAs against the Framework'],
   's1': ['Daily Metrics', 'Track Daily Required Units (DRU) and Daily Punched Revenue (DPR)'],
   's2': ['Funnel Breakdown', 'Section 2 · Visualise pipeline drop off']
 };
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Set Master Date to today on load
   setMasterDate(new Date().toISOString().split('T')[0]);
   
-  // Listen for Sidebar Date Picker changes
   document.getElementById('report-date').addEventListener('change', (e) => {
     setMasterDate(e.target.value);
   });
@@ -70,6 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
       
       eodRenderHome();
       initDruForm(); 
+      initTatForm(); // Initialize dropdowns
       listenToFirebase();
     } else {
       document.getElementById('login-screen').style.display = 'flex';
@@ -86,7 +102,6 @@ function handleLogin() {
 }
 function handleLogout() { auth.signOut(); }
 
-// --- UNIFIED TIME TRAVEL ---
 function setMasterDate(dateStr) {
   document.getElementById('report-date').value = dateStr;
   const selectedDateObj = new Date(dateStr);
@@ -102,13 +117,11 @@ function jumpToToday() {
   refreshAllViews();
 }
 
-// --- FIREBASE LISTENERS WITH LEGACY DATA RESURRECTOR ---
 function listenToFirebase() {
   db.collection("globalLeads").onSnapshot((snapshot) => {
     globalLeads = [];
     snapshot.forEach((doc) => { 
       let data = doc.data();
-      // FIX: If old data is missing a date, extract it from Firebase's hidden timestamp
       if (!data.date && data.timestamp) {
         const d = data.timestamp.toDate();
         data.date = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
@@ -143,6 +156,13 @@ function listenToFirebase() {
     });
     refreshAllViews();
   });
+
+  // NEW: TAT Logs Listener
+  db.collection("tatLogs").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
+    tatLogs = [];
+    snapshot.forEach((doc) => { tatLogs.push({ id: doc.id, ...doc.data() }); });
+    renderTatLogs();
+  });
 }
 
 function refreshAllViews() {
@@ -153,6 +173,7 @@ function refreshAllViews() {
   renderAllReports();
   renderFunnelCalendar();
   renderFunnel();
+  renderTatLogs(); // Render TAT
 }
 
 function getNum(id) { return parseFloat(document.getElementById(id)?.value) || 0; }
@@ -168,6 +189,118 @@ function switchSection(id, el) {
     document.getElementById('topbar-sub').textContent = SECTION_META[id][1];
   }
 }
+
+// --- NEW: TAT TRACKER LOGIC ---
+function initTatForm() {
+  const teamSelect = document.getElementById('tat-team');
+  if (!teamSelect) return;
+  teamSelect.innerHTML = '<option value="">Select Team</option>' + eodData.teams.map(t => `<option value="${t.id}">${t.icon} ${t.name}</option>`).join('');
+}
+
+function updateTatMembers() {
+  const teamId = document.getElementById('tat-team').value;
+  const memberSelect = document.getElementById('tat-member');
+  if (!teamId) {
+    memberSelect.innerHTML = '<option value="">Select Member</option>';
+    return;
+  }
+  const team = eodData.teams.find(t => t.id === teamId);
+  memberSelect.innerHTML = '<option value="">Select Member</option>' + team.members.map(m => `<option value="${m}">${m}</option>`).join('');
+}
+
+function addTatLog() {
+  const teamId = document.getElementById('tat-team').value;
+  const member = document.getElementById('tat-member').value;
+  const leadName = getStr('tat-lead');
+  const milestone = document.getElementById('tat-milestone').value;
+  const timeTaken = getNum('tat-time');
+  const unit = document.getElementById('tat-unit').value;
+  const selectedDate = document.getElementById('report-date').value;
+
+  if (!teamId || !member || !leadName || !milestone || timeTaken <= 0) {
+    return alert('Please fill out all TAT audit fields properly.');
+  }
+
+  const team = eodData.teams.find(t => t.id === teamId);
+  const benchmark = TAT_BENCHMARKS[milestone];
+  
+  // Calculate if SLA was met (need to normalize to minutes for comparison if mixed)
+  let timeInMins = unit === 'hrs' ? timeTaken * 60 : timeTaken;
+  let benchInMins = benchmark.unit === 'hrs' ? benchmark.max * 60 : benchmark.max;
+  
+  const isMet = timeInMins <= benchInMins;
+
+  db.collection("tatLogs").add({
+    teamIcon: team.icon,
+    teamName: team.name,
+    member: member,
+    leadName: leadName,
+    milestone: milestone,
+    timeTaken: timeTaken,
+    unit: unit,
+    benchmarkMax: benchmark.max,
+    benchmarkUnit: benchmark.unit,
+    isMet: isMet,
+    date: selectedDate,
+    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+  });
+
+  document.getElementById('tat-lead').value = '';
+  document.getElementById('tat-milestone').value = '';
+  document.getElementById('tat-time').value = '';
+}
+
+function deleteTatLog(id) { if(confirm("Delete this TAT audit?")) db.collection("tatLogs").doc(id).delete(); }
+
+function renderTatLogs() {
+  const tbody = document.getElementById('tat-log-body');
+  if (!tbody) return;
+
+  const selectedDate = document.getElementById('report-date').value;
+  const dailyTat = tatLogs.filter(log => log.date === selectedDate);
+
+  // Update Summary Metrics
+  const total = dailyTat.length;
+  const met = dailyTat.filter(l => l.isMet).length;
+  const breached = total - met;
+  const rate = total > 0 ? Math.round((met / total) * 100) : 0;
+
+  document.getElementById('tat-total').textContent = total;
+  document.getElementById('tat-met').textContent = met;
+  document.getElementById('tat-breach').textContent = breached;
+  document.getElementById('tat-rate').textContent = rate + '%';
+
+  if (dailyTat.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:20px; color:var(--text3);">No TAT audits logged for ${selectedDate}.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = dailyTat.map(l => {
+    let statusBadge = l.isMet 
+      ? `<span class="badge-pill badge-green">✓ SLA Met</span>` 
+      : `<span class="badge-pill badge-red">✕ Breached</span>`;
+      
+    let timeColor = l.isMet ? 'var(--green)' : 'var(--red)';
+
+    return `
+      <tr style="border-bottom: 1px solid var(--border);">
+        <td style="padding: 10px; color: var(--white); font-weight: 500;">
+          <div>${l.member}</div>
+          <div style="font-size:10px; color:var(--text3);">${l.teamIcon} ${l.teamName}</div>
+        </td>
+        <td style="padding: 10px; color: var(--text2);">${l.leadName}</td>
+        <td style="padding: 10px; color: var(--cyan); font-weight:bold;">
+          ${l.milestone}
+          <div style="font-size:9px; color:var(--text3); font-weight:normal; margin-top:2px;">Target: ${l.benchmarkMax} ${l.benchmarkUnit}</div>
+        </td>
+        <td style="padding: 10px; color: ${timeColor}; font-weight:bold;">${l.timeTaken} ${l.unit}</td>
+        <td style="padding: 10px;">${statusBadge}</td>
+        <td style="padding: 10px; text-align: right;"><button class="del-btn" onclick="deleteTatLog('${l.id}')">✕</button></td>
+      </tr>
+    `;
+  }).join('');
+}
+
 
 // --- TAB 0: LEADERBOARD ---
 function renderLeaderboard() {
@@ -252,7 +385,7 @@ function eodRenderRoster() {
   const selectedDate = document.getElementById('report-date').value; 
 
   grid.innerHTML = eodData.activeTeam.members.map(m => {
-    // FIX: Show leads that are still Pending OR were created on the selected date
+    // Show leads that are still Pending OR were created on the selected date
     const memberLeads = globalLeads.filter(l => 
       l.owner === m && 
       l.teamId === eodData.activeTeam.id && 
@@ -301,12 +434,12 @@ function eodAddMember() {
   if (!nameInput.value.trim()) return;
   eodData.activeTeam.members.push(nameInput.value.trim());
   nameInput.value = '';
-  initDruForm(); eodRenderRoster();
+  initDruForm(); initTatForm(); eodRenderRoster();
 }
 function eodRemoveMember(name) {
   if (confirm(`Remove ${name}?`)) {
     eodData.activeTeam.members = eodData.activeTeam.members.filter(m => m !== name);
-    initDruForm(); eodRenderRoster();
+    initDruForm(); initTatForm(); eodRenderRoster();
   }
 }
 
