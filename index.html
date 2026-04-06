@@ -59,6 +59,10 @@
       <div class="nav-item" onclick="switchSection('s1', this)">
         <span class="nav-icon">◈</span> Daily Metrics
       </div>
+      
+      <div class="nav-item" onclick="switchSection('tat-tracker', this)">
+        <span class="nav-icon">⏱</span> TAT Tracker
+      </div>
 
       <div class="nav-label">Pipeline</div>
       <div class="nav-item" onclick="switchSection('s2', this)">
@@ -236,6 +240,88 @@
         </div>
       </div>
 
+      <div id="tat-tracker" class="section">
+        <div class="section-header">
+          <div class="section-header-text">
+            <h2>TAT <span>Audit & Tracking</span></h2>
+            <p>Monitor Turnaround Time (TAT) SLA compliance against the Skillinabox Framework</p>
+          </div>
+        </div>
+
+        <div class="metric-grid" id="tat-summary">
+          <div class="metric-card"><div class="metric-label">Total Audits Today</div><div class="metric-val" id="tat-total">0</div></div>
+          <div class="metric-card"><div class="metric-label">SLA Compliant</div><div class="metric-val" id="tat-met" style="color:var(--green);">0</div></div>
+          <div class="metric-card"><div class="metric-label">SLA Breached</div><div class="metric-val" id="tat-breach" style="color:var(--red);">0</div></div>
+          <div class="metric-card"><div class="metric-label">Compliance Rate</div><div class="metric-val" id="tat-rate" style="color:var(--cyan);">0%</div></div>
+        </div>
+
+        <div class="card card-accent-orange">
+          <div class="card-title">Log a TAT Audit</div>
+          <p style="font-size:11px; color:var(--text3); margin-bottom:16px;">The system will automatically compare the time taken against the required benchmark.</p>
+          <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
+            <div class="form-group">
+              <label>Team</label>
+              <select id="tat-team" onchange="updateTatMembers()"><option value="">Select Team</option></select>
+            </div>
+            <div class="form-group">
+              <label>Member</label>
+              <select id="tat-member"><option value="">Select Member</option></select>
+            </div>
+            <div class="form-group">
+              <label>Lead Name / ID</label>
+              <input type="text" id="tat-lead" placeholder="e.g. John Doe" />
+            </div>
+            <div class="form-group">
+              <label>Sales Phase (Milestone)</label>
+              <select id="tat-milestone">
+                <option value="">Select Phase...</option>
+                <option value="Lead Assignment">Lead Assignment (BM: 10 mins)</option>
+                <option value="First Call Attempt">First Call Attempt (BM: 30 mins)</option>
+                <option value="Inbound Lead Response">Inbound Lead Response (BM: 5 mins)</option>
+                <option value="Follow-Up (Post First Call)">Follow-Up Post First Call (BM: 24 hrs)</option>
+                <option value="Interested Lead Follow-Up">Interested Lead Follow-Up (BM: 48 hrs)</option>
+                <option value="Demo Scheduling">Demo Scheduling (BM: 24 hrs)</option>
+                <option value="Demo Completion">Demo Completion (BM: 48 hrs)</option>
+                <option value="Post-Demo Follow-Up">Post-Demo Follow-Up (BM: 24 hrs)</option>
+                <option value="Payment Link Sharing">Payment Link Sharing (BM: 10 mins)</option>
+                <option value="Payment Acknowledgment">Payment Acknowledgment (BM: 15 mins)</option>
+                <option value="CRM Update">CRM Update (BM: 4 hrs)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Actual Time Taken</label>
+              <div style="display:flex; gap:8px;">
+                <input type="number" id="tat-time" placeholder="0" min="0" style="flex:2;" />
+                <select id="tat-unit" style="flex:1;">
+                  <option value="mins">Mins</option>
+                  <option value="hrs">Hrs</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <button class="btn btn-accent" onclick="addTatLog()">+ Log TAT Audit</button>
+        </div>
+
+        <div class="card">
+          <div class="card-title">SLA Audit Log</div>
+          <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+              <thead style="background: rgba(26,26,26,0.95);">
+                <tr>
+                  <th style="padding: 10px; text-align: left; color: var(--text3); font-family: 'DM Mono'; font-size: 10px; text-transform: uppercase;">Rep & Team</th>
+                  <th style="padding: 10px; text-align: left; color: var(--text3); font-family: 'DM Mono'; font-size: 10px; text-transform: uppercase;">Lead Info</th>
+                  <th style="padding: 10px; text-align: left; color: var(--cyan); font-family: 'DM Mono'; font-size: 10px; text-transform: uppercase;">Milestone Checked</th>
+                  <th style="padding: 10px; text-align: left; color: var(--text3); font-family: 'DM Mono'; font-size: 10px; text-transform: uppercase;">Actual Time</th>
+                  <th style="padding: 10px; text-align: left; color: var(--text3); font-family: 'DM Mono'; font-size: 10px; text-transform: uppercase;">SLA Status</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="tat-log-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
       <div id="s2" class="section">
         <div class="section-header">
           <div class="section-header-text">
@@ -244,81 +330,4 @@
           </div>
         </div>
 
-        <div class="card" style="padding: 16px; margin-bottom: 24px; border-top: 3px solid var(--cyan);">
-          <div class="calendar-header">
-            <button onclick="changeFunnelMonth(-1)" class="btn btn-sm">◀ Prev</button>
-            <h3 id="funnel-calendar-month-year" style="margin: 0; font-family: 'Barlow Condensed'; font-size: 22px; color: var(--white); font-weight: 700;"></h3>
-            <button onclick="changeFunnelMonth(1)" class="btn btn-sm">Next ▶</button>
-          </div>
-          <div class="calendar-grid" id="funnel-calendar-grid"></div>
-        </div>
-
-        <div class="card card-accent-cyan">
-          <div class="card-title" id="pipeline-title" style="color: var(--cyan);">Live Lead Pipeline</div>
-          <p style="font-size:11px; color:var(--text3); margin-bottom:16px;">This data aggregates automatically when team members log leads in their EOD reports on the selected date.</p>
-          <div class="metric-grid" id="auto-pipeline-stats"></div>
-        </div>
-
-        <div class="card">
-          <div class="card-title">Team-Wise Lead Performance</div>
-          <div style="overflow-x: auto; margin-bottom: 10px;">
-            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
-              <thead style="background: rgba(26,26,26,0.95);">
-                <tr>
-                  <th style="padding: 10px; text-align: left; color: var(--text3); font-family: 'DM Mono'; font-size: 10px; text-transform: uppercase;">Team</th>
-                  <th style="padding: 10px; text-align: left; color: var(--cyan); font-family: 'DM Mono'; font-size: 10px; text-transform: uppercase;">Prospects Logged</th>
-                  <th style="padding: 10px; text-align: left; color: var(--amber); font-family: 'DM Mono'; font-size: 10px; text-transform: uppercase;">Follow-ups Logged</th>
-                  <th style="padding: 10px; text-align: left; color: var(--green); font-family: 'DM Mono'; font-size: 10px; text-transform: uppercase;">Done (Won)</th>
-                  <th style="padding: 10px; text-align: left; color: var(--red); font-family: 'DM Mono'; font-size: 10px; text-transform: uppercase;">Negative (Lost)</th>
-                </tr>
-              </thead>
-              <tbody id="team-wise-pipeline-body"></tbody>
-            </table>
-          </div>
-        </div>
-
-        <div class="card" style="border-left: 3px solid var(--orange);">
-          <div class="card-title">Manual Pipeline Visualisation</div>
-          <div id="funnel-vis"></div>
-        </div>
-
-        <div class="card">
-          <div class="card-title">Manual Stage Data</div>
-          <div style="overflow-x: auto; margin-bottom: 20px;">
-            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
-              <thead style="background: rgba(26,26,26,0.95);">
-                <tr>
-                  <th style="padding: 10px; text-align: left; color: var(--text3); font-family: 'DM Mono'; font-size: 10px; text-transform: uppercase;">Stage</th>
-                  <th style="padding: 10px; text-align: left; color: var(--text3); font-family: 'DM Mono'; font-size: 10px; text-transform: uppercase;">Count</th>
-                  <th style="padding: 10px; text-align: left; color: var(--text3); font-family: 'DM Mono'; font-size: 10px; text-transform: uppercase;">Drop %</th>
-                  <th style="padding: 10px; text-align: left; color: var(--text3); font-family: 'DM Mono'; font-size: 10px; text-transform: uppercase;">Issue Flagged</th>
-                  <th style="padding: 10px; text-align: left; color: var(--text3); font-family: 'DM Mono'; font-size: 10px; text-transform: uppercase;">Owner</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody id="funnel-body"></tbody>
-            </table>
-          </div>
-
-          <div style="border-top: 1px solid var(--border); margin: 20px 0; padding-top: 14px; color: var(--text3); font-size: 10px; font-family: 'DM Mono'; text-transform: uppercase; letter-spacing: 1px;">Add Stage Manually</div>
-          <div class="form-grid">
-            <div class="form-group"><label>Stage Name</label><input type="text" id="f-stage" placeholder="e.g. Connected" /></div>
-            <div class="form-group"><label>Count</label><input type="number" id="f-count" placeholder="0" min="0" /></div>
-            <div class="form-group"><label>Issue</label><input type="text" id="f-issue" placeholder="e.g. Low pick-up rate" /></div>
-            <div class="form-group"><label>Owner</label><input type="text" id="f-owner" placeholder="Name" /></div>
-          </div>
-          <button class="btn btn-accent" onclick="addFunnelRow()">+ Add Pipeline Stage</button>
-        </div>
-      </div>
-
-    </div>
-  </main>
-</div>
-
-<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
-
-<script src="app.js"></script>
-</body>
-</html>
+        <div class="card" style="padding:
