@@ -140,11 +140,24 @@
         <div class="section-header">
           <div class="section-header-text">
             <h2>All <span>Reports</span></h2>
-            <p>View daily EOD submissions and efficiency across all teams</p>
+            <p>Select a date to view EOD submissions and efficiency across all teams</p>
           </div>
         </div>
         
+        <div class="card" style="padding: 16px; margin-bottom: 24px; border-top: 3px solid var(--cyan);">
+          <div class="calendar-header">
+            <button onclick="changeMonth(-1)" class="btn btn-sm">◀ Prev</button>
+            <h3 id="calendar-month-year" style="margin: 0; font-family: 'Barlow Condensed'; font-size: 22px; color: var(--white); font-weight: 700;"></h3>
+            <button onclick="changeMonth(1)" class="btn btn-sm">Next ▶</button>
+          </div>
+          <div class="calendar-grid" id="calendar-grid"></div>
+        </div>
+
         <div class="card">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <div class="card-title" id="reports-table-title" style="margin-bottom:0;">All Reports (Latest First)</div>
+            <button class="btn btn-sm btn-danger" onclick="clearDateFilter()" id="clear-filter-btn" style="display:none; padding: 4px 10px;">✕ Clear Date Filter</button>
+          </div>
           <div style="overflow-x: auto;">
             <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
               <thead style="background: rgba(26,26,26,0.95);">
