@@ -42,24 +42,29 @@
     </div>
 
     <nav class="nav">
-      <div class="nav-label">Home</div>
+      <div class="nav-label">Executive View</div>
       <div class="nav-item active" onclick="switchSection('home-leaderboard', this)">
         <span class="nav-icon">🏆</span> Leaderboard
       </div>
+      <div class="nav-item" onclick="switchSection('insights-view', this)">
+        <span class="nav-icon">💡</span> AI Insights & Actions
+      </div>
 
-      <div class="nav-label">EOD Operations</div>
+      <div class="nav-label">Operations</div>
       <div class="nav-item" onclick="switchSection('teams-eod', this)">
         <span class="nav-icon">◑</span> EOD Report
       </div>
       <div class="nav-item" onclick="switchSection('all-reports', this)">
         <span class="nav-icon">📋</span> All Reports
       </div>
+      <div class="nav-item" onclick="switchSection('blockers-view', this)">
+        <span class="nav-icon">🚧</span> Team Blockers
+      </div>
 
-      <div class="nav-label">Overview</div>
+      <div class="nav-label">Metrics & SLA</div>
       <div class="nav-item" onclick="switchSection('s1', this)">
         <span class="nav-icon">◈</span> Daily Metrics
       </div>
-      
       <div class="nav-item" onclick="switchSection('tat-tracker', this)">
         <span class="nav-icon">⏱</span> TAT Tracker
       </div>
@@ -97,6 +102,17 @@
           </div>
         </div>
         <div id="leaderboard-container"></div>
+      </div>
+
+      <div id="insights-view" class="section">
+        <div class="section-header">
+          <div class="section-header-text">
+            <h2>Executive <span>Insights</span></h2>
+            <p>Automated analysis of today's TAT compliance, efficiency, and team blockers</p>
+          </div>
+        </div>
+        <div id="insights-content">
+          </div>
       </div>
 
       <div id="teams-eod" class="section">
@@ -176,6 +192,31 @@
                 </tr>
               </thead>
               <tbody id="all-reports-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div id="blockers-view" class="section">
+        <div class="section-header">
+          <div class="section-header-text">
+            <h2>Team <span>Blockers</span></h2>
+            <p>Review challenges and blockers reported by the team</p>
+          </div>
+        </div>
+
+        <div class="card card-accent-orange">
+          <div class="card-title">Reported Blockers</div>
+          <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+              <thead style="background: rgba(26,26,26,0.95);">
+                <tr>
+                  <th style="padding: 10px; text-align: left; color: var(--text3); font-family: 'DM Mono'; font-size: 10px; text-transform: uppercase;">Team</th>
+                  <th style="padding: 10px; text-align: left; color: var(--text3); font-family: 'DM Mono'; font-size: 10px; text-transform: uppercase;">Member</th>
+                  <th style="padding: 10px; text-align: left; color: var(--orange); font-family: 'DM Mono'; font-size: 10px; text-transform: uppercase;">Blocker / Challenge</th>
+                </tr>
+              </thead>
+              <tbody id="blockers-body"></tbody>
             </table>
           </div>
         </div>
@@ -404,7 +445,6 @@
 <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
-
 <script src="app.js"></script>
 </body>
 </html>
