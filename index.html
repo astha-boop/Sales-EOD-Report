@@ -37,7 +37,7 @@
     </div>
 
     <div class="sidebar-date">
-      <div style="margin-bottom:5px;text-transform:uppercase;">Reporting Date</div>
+      <div style="margin-bottom:5px;text-transform:uppercase;">Master Date</div>
       <input type="date" id="report-date" />
     </div>
 
@@ -89,7 +89,7 @@
         <div class="section-header">
           <div class="section-header-text">
             <h2>Daily <span>Leaderboard</span></h2>
-            <p>Ranked by Total Revenue Collected Today</p>
+            <p>Ranked by Total Revenue Collected on Selected Date</p>
           </div>
         </div>
         <div id="leaderboard-container"></div>
@@ -146,17 +146,17 @@
         
         <div class="card" style="padding: 16px; margin-bottom: 24px; border-top: 3px solid var(--cyan);">
           <div class="calendar-header">
-            <button onclick="changeMonth(-1)" class="btn btn-sm">◀ Prev</button>
-            <h3 id="calendar-month-year" style="margin: 0; font-family: 'Barlow Condensed'; font-size: 22px; color: var(--white); font-weight: 700;"></h3>
-            <button onclick="changeMonth(1)" class="btn btn-sm">Next ▶</button>
+            <button onclick="changeReportsMonth(-1)" class="btn btn-sm">◀ Prev</button>
+            <h3 id="reports-calendar-month-year" style="margin: 0; font-family: 'Barlow Condensed'; font-size: 22px; color: var(--white); font-weight: 700;"></h3>
+            <button onclick="changeReportsMonth(1)" class="btn btn-sm">Next ▶</button>
           </div>
-          <div class="calendar-grid" id="calendar-grid"></div>
+          <div class="calendar-grid" id="reports-calendar-grid"></div>
         </div>
 
         <div class="card">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-            <div class="card-title" id="reports-table-title" style="margin-bottom:0;">All Reports (Latest First)</div>
-            <button class="btn btn-sm btn-danger" onclick="clearDateFilter()" id="clear-filter-btn" style="display:none; padding: 4px 10px;">✕ Clear Date Filter</button>
+            <div class="card-title" id="reports-table-title" style="margin-bottom:0;">All Reports</div>
+            <button class="btn btn-sm btn-danger" onclick="jumpToToday()" style="padding: 4px 10px;">Jump to Today</button>
           </div>
           <div style="overflow-x: auto;">
             <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
@@ -240,13 +240,22 @@
         <div class="section-header">
           <div class="section-header-text">
             <h2>Funnel <span>Breakdown</span></h2>
-            <p>Section 2 · Visualise where pipeline drops off</p>
+            <p>Section 2 · Visualise where pipeline drops off based on the Selected Date</p>
           </div>
         </div>
 
+        <div class="card" style="padding: 16px; margin-bottom: 24px; border-top: 3px solid var(--cyan);">
+          <div class="calendar-header">
+            <button onclick="changeFunnelMonth(-1)" class="btn btn-sm">◀ Prev</button>
+            <h3 id="funnel-calendar-month-year" style="margin: 0; font-family: 'Barlow Condensed'; font-size: 22px; color: var(--white); font-weight: 700;"></h3>
+            <button onclick="changeFunnelMonth(1)" class="btn btn-sm">Next ▶</button>
+          </div>
+          <div class="calendar-grid" id="funnel-calendar-grid"></div>
+        </div>
+
         <div class="card card-accent-cyan">
-          <div class="card-title" style="color: var(--cyan);">Live Lead Pipeline (Auto-Synced from Teams)</div>
-          <p style="font-size:11px; color:var(--text3); margin-bottom:16px;">This data aggregates automatically when team members log leads in their EOD reports.</p>
+          <div class="card-title" id="pipeline-title" style="color: var(--cyan);">Live Lead Pipeline</div>
+          <p style="font-size:11px; color:var(--text3); margin-bottom:16px;">This data aggregates automatically when team members log leads in their EOD reports on the selected date.</p>
           <div class="metric-grid" id="auto-pipeline-stats"></div>
         </div>
 
