@@ -193,7 +193,7 @@ function switchSection(id, el) {
   }
 }
 
-// --- NEW TAB: AI INSIGHTS & ACTIONS ---
+// --- INSIGHTS VIEW ---
 function renderInsights() {
   const container = document.getElementById('insights-content');
   if (!container) return;
@@ -236,11 +236,11 @@ function renderInsights() {
   `;
 
   if (worstMilestone) {
-    actionsHtml += `<div style="background:rgba(232,64,64,0.1); border-left:3px solid var(--red); padding:12px; border-radius:4px;"><strong style="color:var(--red);">Process Bottleneck:</strong> Review the workflow for <strong>${worstMilestone}</strong>. Remind the team of the framework benchmark to prevent lead leakage.</div>`;
+    actionsHtml += `<div style="background:rgba(255,77,77,0.1); border-left:3px solid var(--red); padding:12px; border-radius:4px;"><strong style="color:var(--red);">Process Bottleneck:</strong> Review the workflow for <strong>${worstMilestone}</strong>. Remind the team of the framework benchmark to prevent lead leakage.</div>`;
   }
   
   if (dailyBlockers.length > 0) {
-    actionsHtml += `<div style="background:rgba(245,166,35,0.1); border-left:3px solid var(--amber); padding:12px; border-radius:4px;"><strong style="color:var(--amber);">Resolve Blockers:</strong> Review the <a href="#" onclick="switchSection('blockers-view')" style="color:var(--cyan);">Team Blockers tab</a> and address the ${dailyBlockers.length} issues raised in tomorrow's stand-up.</div>`;
+    actionsHtml += `<div style="background:rgba(255,179,71,0.1); border-left:3px solid var(--amber); padding:12px; border-radius:4px;"><strong style="color:var(--amber);">Resolve Blockers:</strong> Review the <a href="#" onclick="switchSection('blockers-view')" style="color:var(--cyan);">Team Blockers tab</a> and address the ${dailyBlockers.length} issues raised in tomorrow's stand-up.</div>`;
   }
 
   if (lowEffReps.length > 0) {
@@ -248,7 +248,7 @@ function renderInsights() {
   }
 
   if (!worstMilestone && dailyBlockers.length === 0 && lowEffReps.length === 0) {
-    actionsHtml += `<div style="background:rgba(61,203,122,0.1); border-left:3px solid var(--green); padding:12px; border-radius:4px;"><strong style="color:var(--green);">All Clear:</strong> Metrics look healthy. Focus on pipeline progression and closing.</div>`;
+    actionsHtml += `<div style="background:rgba(74,222,128,0.1); border-left:3px solid var(--green); padding:12px; border-radius:4px;"><strong style="color:var(--green);">All Clear:</strong> Metrics look healthy. Focus on pipeline progression and closing.</div>`;
   }
 
   actionsHtml += `</div></div>`;
@@ -262,7 +262,7 @@ function renderInsights() {
 }
 
 
-// --- TAB: BLOCKERS ---
+// --- BLOCKERS VIEW ---
 function renderBlockers() {
   const tbody = document.getElementById('blockers-body');
   if (!tbody) return;
@@ -287,7 +287,7 @@ function renderBlockers() {
 }
 
 
-// --- TAB 0: LEADERBOARD ---
+// --- LEADERBOARD ---
 function renderLeaderboard() {
   const container = document.getElementById('leaderboard-container');
   if (!container) return;
@@ -332,7 +332,7 @@ function renderLeaderboard() {
   }).join('') + `</div>`;
 }
 
-// --- TAB 1: TEAMS EOD LOGIC ---
+// --- TEAMS EOD LOGIC ---
 function eodRenderHome() {
   const grid = document.getElementById('eod-team-grid');
   grid.innerHTML = eodData.teams.map(t => `
@@ -370,7 +370,6 @@ function eodRenderRoster() {
   const selectedDate = document.getElementById('report-date').value; 
 
   grid.innerHTML = eodData.activeTeam.members.map(m => {
-    // FIX: Daily view strictly shows ONLY leads logged on the selected date.
     const memberLeads = globalLeads.filter(l => 
       l.owner === m && 
       l.teamId === eodData.activeTeam.id && 
@@ -381,8 +380,8 @@ function eodRenderRoster() {
       let statusColor = l.status === 'Done' ? 'var(--green)' : l.status === 'Negative' ? 'var(--red)' : 'var(--amber)';
       let actionButtons = l.status === 'Pending' ? `
         <div style="display:flex; gap:5px; margin-top:6px;">
-          <button onclick="event.stopPropagation(); updateLeadStatus('${l.id}', 'Done')" style="flex:1; background:rgba(61,203,122,0.15); color:var(--green); border:1px solid rgba(61,203,122,0.3); border-radius:3px; font-size:10px; padding:4px; cursor:pointer; font-weight:bold;">✓ Done</button>
-          <button onclick="event.stopPropagation(); updateLeadStatus('${l.id}', 'Negative')" style="flex:1; background:rgba(232,64,64,0.15); color:var(--red); border:1px solid rgba(232,64,64,0.3); border-radius:3px; font-size:10px; padding:4px; cursor:pointer; font-weight:bold;">✕ Negative</button>
+          <button onclick="event.stopPropagation(); updateLeadStatus('${l.id}', 'Done')" style="flex:1; background:rgba(74,222,128,0.15); color:var(--green); border:1px solid rgba(74,222,128,0.3); border-radius:3px; font-size:10px; padding:4px; cursor:pointer; font-weight:bold;">✓ Done</button>
+          <button onclick="event.stopPropagation(); updateLeadStatus('${l.id}', 'Negative')" style="flex:1; background:rgba(255,77,77,0.15); color:var(--red); border:1px solid rgba(255,77,77,0.3); border-radius:3px; font-size:10px; padding:4px; cursor:pointer; font-weight:bold;">✕ Negative</button>
         </div>
       ` : `<div style="font-size:10px; margin-top:6px; font-weight:bold; color:${statusColor}; text-align: center; padding: 2px; background: ${statusColor}22; border-radius: 3px;">${l.status.toUpperCase()}</div>`;
 
@@ -411,18 +410,14 @@ function eodRenderRoster() {
     `;
   }).join('');
 
-  // NEW: Calculate and render the Team Backlog (All Pending Leads for this team)
-  const pendingLeads = globalLeads.filter(l => 
-    l.teamId === eodData.activeTeam.id && 
-    l.status === 'Pending'
-  );
-  
+  const pendingLeads = globalLeads.filter(l => l.teamId === eodData.activeTeam.id && l.status === 'Pending');
   const pendingBody = document.getElementById('team-pending-leads-body');
+  
   if (pendingBody) {
     if (pendingLeads.length === 0) {
       pendingBody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:20px; color:var(--text3);">No pending leads for this team. Great job!</td></tr>';
     } else {
-      pendingLeads.sort((a,b) => new Date(a.date) - new Date(b.date)); // Sort oldest first
+      pendingLeads.sort((a,b) => new Date(a.date) - new Date(b.date)); 
       
       pendingBody.innerHTML = pendingLeads.map(l => `
         <tr style="border-bottom: 1px solid var(--border);">
@@ -434,8 +429,8 @@ function eodRenderRoster() {
           <td style="padding: 10px; color: var(--amber); font-weight: bold;">${l.status}</td>
           <td style="padding: 10px;">
             <div style="display:flex; gap:5px;">
-              <button onclick="updateLeadStatus('${l.id}', 'Done')" style="background:rgba(61,203,122,0.15); color:var(--green); border:1px solid rgba(61,203,122,0.3); border-radius:3px; font-size:10px; padding:4px 8px; cursor:pointer; font-weight:bold;">✓ Done</button>
-              <button onclick="updateLeadStatus('${l.id}', 'Negative')" style="background:rgba(232,64,64,0.15); color:var(--red); border:1px solid rgba(232,64,64,0.3); border-radius:3px; font-size:10px; padding:4px 8px; cursor:pointer; font-weight:bold;">✕ Neg</button>
+              <button onclick="updateLeadStatus('${l.id}', 'Done')" style="background:rgba(74,222,128,0.15); color:var(--green); border:1px solid rgba(74,222,128,0.3); border-radius:3px; font-size:10px; padding:4px 8px; cursor:pointer; font-weight:bold;">✓ Done</button>
+              <button onclick="updateLeadStatus('${l.id}', 'Negative')" style="background:rgba(255,77,77,0.15); color:var(--red); border:1px solid rgba(255,77,77,0.3); border-radius:3px; font-size:10px; padding:4px 8px; cursor:pointer; font-weight:bold;">✕ Neg</button>
             </div>
           </td>
         </tr>
@@ -546,8 +541,8 @@ function eodRenderFormHTML() {
         <div style="flex:1; background: var(--bg3); padding: 16px; border-radius: var(--radius);"><div style="font-size:10px; color:var(--text3); text-transform:uppercase;">Efficiency %</div><div id="calc-pct" style="font-size: 24px; font-weight:bold; color:var(--white);">0%</div><div style="font-size:10px; color:var(--text3); margin-top:2px;">Based on 7-hour day</div></div>
       </div>
       <div style="margin-top: 16px; display:flex; gap: 10px;">
-        <span id="badge-benchmark" style="padding: 4px 10px; font-size:11px; font-weight:bold; border-radius: 20px; background: rgba(232,64,64,0.1); color: var(--red);">✗ Core Benchmark Not Met</span>
-        <span id="badge-highly" style="padding: 4px 10px; font-size:11px; font-weight:bold; border-radius: 20px; background: rgba(232,64,64,0.1); color: var(--red);">✗ Under 3.5hrs</span>
+        <span id="badge-benchmark" style="padding: 4px 10px; font-size:11px; font-weight:bold; border-radius: 20px; background: rgba(255,77,77,0.15); color: var(--red);">✗ Core Benchmark Not Met</span>
+        <span id="badge-highly" style="padding: 4px 10px; font-size:11px; font-weight:bold; border-radius: 20px; background: rgba(255,77,77,0.15); color: var(--red);">✗ Under 3.5hrs</span>
       </div>
     </div>
     <button class="btn btn-accent" style="width:100%; padding: 12px; margin-bottom: 20px;" onclick="submitFinalEOD()">Submit ${eodData.activeMember}'s Report</button>
@@ -576,11 +571,11 @@ function calcEfficiency() {
   document.getElementById('calc-pct').textContent = efficiencyPct + '%';
   const badgeBench = document.getElementById('badge-benchmark'); const badgeHighly = document.getElementById('badge-highly');
 
-  if (calls >= 200 || talkTimeMins >= 180) { badgeBench.textContent = '✓ Core Benchmark Met'; badgeBench.style.background = 'rgba(61,203,122,0.15)'; badgeBench.style.color = 'var(--green)'; } 
-  else { badgeBench.textContent = `✗ Missed Core`; badgeBench.style.background = 'rgba(232,64,64,0.1)'; badgeBench.style.color = 'var(--red)'; }
+  if (calls >= 200 || talkTimeMins >= 180) { badgeBench.textContent = '✓ Core Benchmark Met'; badgeBench.style.background = 'rgba(74,222,128,0.15)'; badgeBench.style.color = 'var(--green)'; } 
+  else { badgeBench.textContent = `✗ Missed Core`; badgeBench.style.background = 'rgba(255,77,77,0.15)'; badgeBench.style.color = 'var(--red)'; }
 
   if (totalProductiveHours >= 3.5) { badgeHighly.textContent = '⚡ Highly Efficient'; badgeHighly.style.background = 'rgba(41,171,226,0.15)'; badgeHighly.style.color = 'var(--cyan)'; document.getElementById('calc-pct').style.color = 'var(--cyan)'; } 
-  else { badgeHighly.textContent = '✗ Under 3.5hrs'; badgeHighly.style.background = 'rgba(232,64,64,0.1)'; badgeHighly.style.color = 'var(--red)'; document.getElementById('calc-pct').style.color = 'var(--white)'; }
+  else { badgeHighly.textContent = '✗ Under 3.5hrs'; badgeHighly.style.background = 'rgba(255,77,77,0.15)'; badgeHighly.style.color = 'var(--red)'; document.getElementById('calc-pct').style.color = 'var(--white)'; }
 }
 
 function submitFinalEOD() { 
@@ -638,7 +633,7 @@ function submitFinalEOD() {
   formLeads = []; alert(`✅ ${eodData.activeMember}'s EOD submitted successfully for ${selectedDate}!`); eodGoToTeam(); 
 }
 
-// --- ALL REPORTS TAB ---
+// --- ALL REPORTS TAB (W/ NEON BLINK) ---
 function renderReportsCalendar() {
   const grid = document.getElementById('reports-calendar-grid');
   const monthYear = document.getElementById('reports-calendar-month-year');
@@ -684,14 +679,28 @@ function renderAllReports() {
     return;
   }
 
+  // Find max and min efficiency for neon highlight
+  const efficiencies = dailyReports.map(r => parseFloat(r.efficiency));
+  const maxEff = Math.max(...efficiencies);
+  const minEff = Math.min(...efficiencies);
+  const showNeon = dailyReports.length > 1 && maxEff !== minEff;
+
   tbody.innerHTML = dailyReports.map(r => {
-    let effColor = r.efficiency >= 50 ? 'var(--cyan)' : 'var(--white)';
+    let eff = parseFloat(r.efficiency);
+    let effClass = "";
+    let effColor = eff >= 50 ? 'var(--cyan)' : 'var(--white)';
+
+    if (showNeon) {
+      if (eff === maxEff) effClass = "neon-green-blink";
+      else if (eff === minEff) effClass = "neon-red-blink";
+    }
+
     return `
       <tr style="border-bottom: 1px solid var(--border);">
         <td style="padding: 10px; color: var(--text2);">${r.date}</td>
         <td style="padding: 10px; color: var(--white); font-weight: 500;">${r.member}</td>
         <td style="padding: 10px; color: var(--text2);">${r.teamIcon} ${r.team}</td>
-        <td style="padding: 10px; color: ${effColor}; font-weight:bold;">${r.efficiency}%</td>
+        <td style="padding: 10px; color: ${effClass ? 'inherit' : effColor}; font-weight:bold;" class="${effClass}">${r.efficiency}%</td>
         <td style="padding: 10px; color: var(--text2);">${r.calls}</td>
         <td style="padding: 10px; color: var(--text2);">${r.talkTime}m</td>
         <td style="padding: 10px; color: var(--text3); font-size: 11px; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${r.blockers || 'None'}">${r.blockers || '—'}</td>
@@ -752,14 +761,14 @@ function renderDruLogs() {
   if (dailyDruLogs.length === 0) return tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:20px; color:var(--text3);">No DRU/DPR logged for ${selectedDate}.</td></tr>`;
 
   tbody.innerHTML = dailyDruLogs.map(l => {
-    let druBtn = l.druAchieved >= l.druTarget && l.druTarget > 0 ? `<button onclick="updateDruProgress('${l.id}', 'dru')" style="background:rgba(61,203,122,0.15); color:var(--green); border:1px solid rgba(61,203,122,0.3); border-radius:3px; font-size:10px; padding:4px 8px; cursor:pointer; font-weight:bold; margin-right:5px;">✓ DRU Met</button>` : l.druAchieved > 0 ? `<button onclick="updateDruProgress('${l.id}', 'dru')" style="background:rgba(245,166,35,0.15); color:var(--amber); border:1px solid rgba(245,166,35,0.3); border-radius:3px; font-size:10px; padding:4px 8px; cursor:pointer; font-weight:bold; margin-right:5px;">⏳ Pending (${l.druAchieved}/${l.druTarget})</button>` : `<button onclick="updateDruProgress('${l.id}', 'dru')" style="background:var(--bg4); color:var(--text3); border:1px solid var(--border); border-radius:3px; font-size:10px; padding:4px 8px; cursor:pointer; margin-right:5px;">? DRU Pending</button>`;
-    let dprBtn = l.collected >= l.dprTarget && l.dprTarget > 0 ? `<button onclick="updateDruProgress('${l.id}', 'dpr')" style="background:rgba(61,203,122,0.15); color:var(--green); border:1px solid rgba(61,203,122,0.3); border-radius:3px; font-size:10px; padding:4px 8px; cursor:pointer; font-weight:bold;">✓ DPR Met</button>` : l.collected > 0 ? `<button onclick="updateDruProgress('${l.id}', 'dpr')" style="background:rgba(245,166,35,0.15); color:var(--amber); border:1px solid rgba(245,166,35,0.3); border-radius:3px; font-size:10px; padding:4px 8px; cursor:pointer; font-weight:bold;">⏳ Pending (₹${l.collected})</button>` : `<button onclick="updateDruProgress('${l.id}', 'dpr')" style="background:var(--bg4); color:var(--text3); border:1px solid var(--border); border-radius:3px; font-size:10px; padding:4px 8px; cursor:pointer;">? DPR Pending</button>`;
+    let druBtn = l.druAchieved >= l.druTarget && l.druTarget > 0 ? `<button onclick="updateDruProgress('${l.id}', 'dru')" style="background:rgba(74,222,128,0.15); color:var(--green); border:1px solid rgba(74,222,128,0.3); border-radius:3px; font-size:10px; padding:4px 8px; cursor:pointer; font-weight:bold; margin-right:5px;">✓ DRU Met</button>` : l.druAchieved > 0 ? `<button onclick="updateDruProgress('${l.id}', 'dru')" style="background:rgba(255,179,71,0.15); color:var(--amber); border:1px solid rgba(255,179,71,0.3); border-radius:3px; font-size:10px; padding:4px 8px; cursor:pointer; font-weight:bold; margin-right:5px;">⏳ Pending (${l.druAchieved}/${l.druTarget})</button>` : `<button onclick="updateDruProgress('${l.id}', 'dru')" style="background:var(--bg4); color:var(--text3); border:1px solid var(--border); border-radius:3px; font-size:10px; padding:4px 8px; cursor:pointer; margin-right:5px;">? DRU Pending</button>`;
+    let dprBtn = l.collected >= l.dprTarget && l.dprTarget > 0 ? `<button onclick="updateDruProgress('${l.id}', 'dpr')" style="background:rgba(74,222,128,0.15); color:var(--green); border:1px solid rgba(74,222,128,0.3); border-radius:3px; font-size:10px; padding:4px 8px; cursor:pointer; font-weight:bold;">✓ DPR Met</button>` : l.collected > 0 ? `<button onclick="updateDruProgress('${l.id}', 'dpr')" style="background:rgba(255,179,71,0.15); color:var(--amber); border:1px solid rgba(255,179,71,0.3); border-radius:3px; font-size:10px; padding:4px 8px; cursor:pointer; font-weight:bold;">⏳ Pending (₹${l.collected})</button>` : `<button onclick="updateDruProgress('${l.id}', 'dpr')" style="background:var(--bg4); color:var(--text3); border:1px solid var(--border); border-radius:3px; font-size:10px; padding:4px 8px; cursor:pointer;">? DPR Pending</button>`;
 
     return `<tr style="border-bottom: 1px solid var(--border);"><td style="padding: 10px; color: var(--white); font-weight: 500;"><span style="margin-right:5px;">${l.teamIcon}</span> ${l.teamName}</td><td style="padding: 10px; color: var(--text2);">${l.druTarget}</td><td style="padding: 10px; color: var(--cyan); font-weight:bold;">${l.druAchieved}</td><td style="padding: 10px; color: var(--text2);">₹${l.dprTarget.toLocaleString('en-IN')}</td><td style="padding: 10px; color: var(--green); font-weight:bold;">₹${l.collected.toLocaleString('en-IN')}</td><td style="padding: 10px;">${druBtn} ${dprBtn}</td><td style="padding: 10px; text-align: right;"><button class="del-btn" onclick="deleteDruLog('${l.id}')">✕</button></td></tr>`;
   }).join('');
 }
 
-// --- NEW TAB: TAT TRACKER ---
+// --- TAB: TAT TRACKER ---
 function initTatForm() {
   const teamSelect = document.getElementById('tat-team');
   if (!teamSelect) return;
