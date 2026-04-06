@@ -23,6 +23,10 @@ let globalLeads = [];
 let druLogs = []; 
 let allReports = []; 
 
+// Calendar State
+let currentCalDate = new Date(); 
+let selectedFilterDate = null; 
+
 let currentFormState = { calls: '', tt: '', sched: '', done: '', followups: '', prospects: '', blockers: '' };
 
 let eodData = {
@@ -54,16 +58,11 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('report-date').value = new Date().toISOString().split('T')[0];
   document.getElementById('topbar-date').textContent = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   
-  // NEW: Listen for date changes to "Time Travel" the dashboard
+  // Listen for date picker changes to "Time Travel"
   document.getElementById('report-date').addEventListener('change', () => {
-    // Update the pretty date string at the top right
     const selectedDateObj = new Date(document.getElementById('report-date').value);
     document.getElementById('topbar-date').textContent = selectedDateObj.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-    
-    // Clear manual funnel when changing dates
     state.funnel = []; 
-    
-    // Force all screens to redraw using the new date filter
     refreshAllViews();
   });
 
@@ -107,6 +106,7 @@ function listenToFirebase() {
   db.collection("eodReports").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
     allReports = [];
     snapshot.forEach((doc) => { allReports.push({ id: doc.id, ...doc.data() }); });
+    renderCalendar();
     renderAllReports();
   });
 }
@@ -117,7 +117,6 @@ function refreshAllViews() {
   renderFunnel();
   renderLeaderboard(); 
   renderDruLogs();
-  renderAllReports();
 }
 
 function getNum(id) { return parseFloat(document.getElementById(id)?.value) || 0; }
@@ -139,7 +138,6 @@ function renderLeaderboard() {
   const container = document.getElementById('leaderboard-container');
   if (!container) return;
   
-  // NEW: Filter by selected date
   const selectedDate = document.getElementById('report-date').value;
   const dailyDruLogs = druLogs.filter(log => log.date === selectedDate);
   
@@ -155,7 +153,7 @@ function renderLeaderboard() {
   let sortedTeams = Object.values(teamStats).sort((a, b) => b.revenue - a.revenue);
 
   if (sortedTeams.length === 0) {
-    container.innerHTML = `<div style="text-align:center; color:var(--text3); padding:40px;">No revenue logged for ${selectedDate}.</div>`;
+    container.innerHTML = `<div style="text-align:center; color:var(--text3); padding:40px;">No revenue logged for ${selectedDate}. EOD operations will populate the leaderboard.</div>`;
     return;
   }
 
@@ -215,10 +213,10 @@ function eodGoToTeam() {
 
 function eodRenderRoster() {
   const grid = document.getElementById('eod-member-grid');
-  const selectedDate = document.getElementById('report-date').value; // NEW: Get Selected Date
+  const selectedDate = document.getElementById('report-date').value; 
 
   grid.innerHTML = eodData.activeTeam.members.map(m => {
-    // NEW: Filter leads by owner AND date
+    // Filter leads by owner, team, AND date
     const memberLeads = globalLeads.filter(l => l.owner === m && l.teamId === eodData.activeTeam.id && l.date === selectedDate);
     
     let leadsHTML = memberLeads.map(l => {
@@ -413,7 +411,6 @@ function submitFinalEOD() {
     }
   }
 
-  // 1. Push Specific Leads to Firebase (ADDED DATE FIELD)
   const selectedDate = document.getElementById('report-date').value;
 
   formLeads.forEach(l => {
@@ -425,13 +422,250 @@ function submitFinalEOD() {
         status: 'Pending', 
         owner: eodData.activeMember, 
         teamId: eodData.activeTeam.id,
-        date: selectedDate, // NEW: Tag with date
+        date: selectedDate, 
         timestamp: firebase.firestore.FieldValue.serverTimestamp() 
       });
     }
   });
   
-  // 2. Push Full EOD Report
   const calls = parseFloat(currentFormState.calls) || 0;
   const talkTimeMins = parseFloat(currentFormState.tt) || 0;
-  const totalProductiveHours = (talkTimeM
+  const totalProductiveHours = (talkTimeMins / 60) + (extraTasks.reduce((sum, task) => sum + task.minutes, 0) / 60);
+  const efficiencyPct = Math.min((totalProductiveHours / 7) * 100, 100).toFixed(0);
+
+  db.collection("eodReports").add({
+    member: eodData.activeMember,
+    team: eodData.activeTeam.name,
+    teamIcon: eodData.activeTeam.icon,
+    date: selectedDate, 
+    calls: calls,
+    talkTime: talkTimeMins,
+    efficiency: efficiencyPct,
+    blockers: currentFormState.blockers,
+    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+  });
+
+  formLeads = []; alert(`✅ ${eodData.activeMember}'s EOD submitted successfully for ${selectedDate}!`); eodGoToTeam(); 
+}
+
+// --- ALL REPORTS TAB W/ CALENDAR LOGIC ---
+function renderCalendar() {
+  const grid = document.getElementById('calendar-grid');
+  const monthYear = document.getElementById('calendar-month-year');
+  if (!grid || !monthYear) return;
+
+  const year = currentCalDate.getFullYear();
+  const month = currentCalDate.getMonth();
+
+  const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  monthYear.textContent = `${monthNames[month]} ${year}`;
+
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  let html = daysOfWeek.map(d => `<div class="cal-day-header">${d}</div>`).join('');
+
+  for (let i = 0; i < firstDay; i++) {
+    html += `<div class="cal-day empty"></div>`;
+  }
+
+  for (let i = 1; i <= daysInMonth; i++) {
+    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+    const hasReports = allReports.some(r => r.date === dateStr);
+    const dotHtml = hasReports ? `<div class="cal-dot"></div>` : '';
+    const isActive = selectedFilterDate === dateStr ? 'active' : '';
+
+    html += `<div class="cal-day ${isActive}" onclick="filterReportsByDate('${dateStr}')">${i}${dotHtml}</div>`;
+  }
+
+  grid.innerHTML = html;
+}
+
+function changeMonth(offset) {
+  currentCalDate.setMonth(currentCalDate.getMonth() + offset);
+  renderCalendar();
+}
+
+function filterReportsByDate(dateStr) {
+  selectedFilterDate = dateStr;
+  renderCalendar(); 
+  renderAllReports(); 
+}
+
+function clearDateFilter() {
+  selectedFilterDate = null;
+  renderCalendar();
+  renderAllReports();
+}
+
+function renderAllReports() {
+  const tbody = document.getElementById('all-reports-body');
+  const title = document.getElementById('reports-table-title');
+  const clearBtn = document.getElementById('clear-filter-btn');
+  if (!tbody) return;
+
+  let displayReports = allReports;
+
+  if (selectedFilterDate) {
+    displayReports = allReports.filter(r => r.date === selectedFilterDate);
+    const dateObj = new Date(selectedFilterDate);
+    title.innerHTML = `Reports for <span style="color:var(--cyan);">${dateObj.toLocaleDateString('en-IN', {day:'numeric', month:'short'})}</span>`;
+    clearBtn.style.display = 'block';
+  } else {
+    title.textContent = 'All Reports (Latest First)';
+    clearBtn.style.display = 'none';
+  }
+
+  if (displayReports.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:20px; color:var(--text3);">No EOD reports ${selectedFilterDate ? 'on this date' : 'submitted yet'}.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = displayReports.map(r => {
+    let effColor = r.efficiency >= 50 ? 'var(--cyan)' : 'var(--white)';
+    return `
+      <tr style="border-bottom: 1px solid var(--border);">
+        <td style="padding: 10px; color: var(--text2);">${r.date}</td>
+        <td style="padding: 10px; color: var(--white); font-weight: 500;">${r.member}</td>
+        <td style="padding: 10px; color: var(--text2);">${r.teamIcon} ${r.team}</td>
+        <td style="padding: 10px; color: ${effColor}; font-weight:bold;">${r.efficiency}%</td>
+        <td style="padding: 10px; color: var(--text2);">${r.calls}</td>
+        <td style="padding: 10px; color: var(--text2);">${r.talkTime}m</td>
+        <td style="padding: 10px; color: var(--text3); font-size: 11px; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${r.blockers || 'None'}">${r.blockers || '—'}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+
+// --- TAB 2: DRU & DPR TRACKER ---
+function initDruForm() {
+  const teamSelect = document.getElementById('dru-team');
+  if (!teamSelect) return;
+  teamSelect.innerHTML = '<option value="">Select Team</option>' + eodData.teams.map(t => `<option value="${t.id}">${t.icon} ${t.name}</option>`).join('');
+}
+
+function addDruLog() {
+  const teamId = document.getElementById('dru-team').value;
+  if (!teamId) return alert('Please select a team.');
+  const team = eodData.teams.find(t => t.id === teamId);
+  const selectedDate = document.getElementById('report-date').value; 
+
+  db.collection("druLogs").add({ 
+    teamIcon: team.icon, 
+    teamName: team.name, 
+    druTarget: getNum('dru-target'), 
+    druAchieved: getNum('dru-achieved'), 
+    dprTarget: getNum('dru-dpr-target'), 
+    collected: getNum('dru-collected'), 
+    date: selectedDate,
+    timestamp: firebase.firestore.FieldValue.serverTimestamp() 
+  });
+  document.getElementById('dru-team').value = ''; document.getElementById('dru-target').value = ''; document.getElementById('dru-achieved').value = ''; document.getElementById('dru-dpr-target').value = ''; document.getElementById('dru-collected').value = '';
+}
+
+function updateDruProgress(id, type) {
+  const log = druLogs.find(l => l.id === id); if (!log) return;
+  if (type === 'dru') { let val = prompt(`Enter DRU achieved for ${log.teamName}:`, log.druAchieved); if (val !== null) db.collection("druLogs").doc(id).update({ druAchieved: parseFloat(val) || 0 }); } 
+  else { let val = prompt(`Enter Revenue collected for ${log.teamName}:`, log.collected); if (val !== null) db.collection("druLogs").doc(id).update({ collected: parseFloat(val) || 0 }); }
+}
+
+function deleteDruLog(id) { if(confirm("Delete this log?")) db.collection("druLogs").doc(id).delete(); }
+
+function renderDruLogs() {
+  const summary = document.getElementById('dru-summary'); const tbody = document.getElementById('dru-log-body');
+  if (!summary || !tbody) return;
+
+  const selectedDate = document.getElementById('report-date').value;
+  const dailyDruLogs = druLogs.filter(log => log.date === selectedDate);
+
+  summary.innerHTML = `
+    <div class="metric-card"><div class="metric-label">Total DRU (Target)</div><div class="metric-val" style="color:var(--text2);">${dailyDruLogs.reduce((s, l) => s + l.druTarget, 0)}</div></div>
+    <div class="metric-card"><div class="metric-label">Total DRU (Achieved)</div><div class="metric-val" style="color:var(--cyan);">${dailyDruLogs.reduce((s, l) => s + l.druAchieved, 0)}</div></div>
+    <div class="metric-card"><div class="metric-label">Total DPR (Target)</div><div class="metric-val" style="color:var(--text2);">₹${dailyDruLogs.reduce((s, l) => s + l.dprTarget, 0).toLocaleString('en-IN')}</div></div>
+    <div class="metric-card"><div class="metric-label">Total Collected</div><div class="metric-val" style="color:var(--green);">₹${dailyDruLogs.reduce((s, l) => s + l.collected, 0).toLocaleString('en-IN')}</div></div>
+  `;
+
+  if (dailyDruLogs.length === 0) return tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:20px; color:var(--text3);">No DRU/DPR logged for ${selectedDate}.</td></tr>`;
+
+  tbody.innerHTML = dailyDruLogs.map(l => {
+    let druBtn = l.druAchieved >= l.druTarget && l.druTarget > 0 ? `<button onclick="updateDruProgress('${l.id}', 'dru')" style="background:rgba(61,203,122,0.15); color:var(--green); border:1px solid rgba(61,203,122,0.3); border-radius:3px; font-size:10px; padding:4px 8px; cursor:pointer; font-weight:bold; margin-right:5px;">✓ DRU Met</button>` : l.druAchieved > 0 ? `<button onclick="updateDruProgress('${l.id}', 'dru')" style="background:rgba(245,166,35,0.15); color:var(--amber); border:1px solid rgba(245,166,35,0.3); border-radius:3px; font-size:10px; padding:4px 8px; cursor:pointer; font-weight:bold; margin-right:5px;">⏳ Pending (${l.druAchieved}/${l.druTarget})</button>` : `<button onclick="updateDruProgress('${l.id}', 'dru')" style="background:var(--bg4); color:var(--text3); border:1px solid var(--border); border-radius:3px; font-size:10px; padding:4px 8px; cursor:pointer; margin-right:5px;">? DRU Pending</button>`;
+    let dprBtn = l.collected >= l.dprTarget && l.dprTarget > 0 ? `<button onclick="updateDruProgress('${l.id}', 'dpr')" style="background:rgba(61,203,122,0.15); color:var(--green); border:1px solid rgba(61,203,122,0.3); border-radius:3px; font-size:10px; padding:4px 8px; cursor:pointer; font-weight:bold;">✓ DPR Met</button>` : l.collected > 0 ? `<button onclick="updateDruProgress('${l.id}', 'dpr')" style="background:rgba(245,166,35,0.15); color:var(--amber); border:1px solid rgba(245,166,35,0.3); border-radius:3px; font-size:10px; padding:4px 8px; cursor:pointer; font-weight:bold;">⏳ Pending (₹${l.collected})</button>` : `<button onclick="updateDruProgress('${l.id}', 'dpr')" style="background:var(--bg4); color:var(--text3); border:1px solid var(--border); border-radius:3px; font-size:10px; padding:4px 8px; cursor:pointer;">? DPR Pending</button>`;
+
+    return `<tr style="border-bottom: 1px solid var(--border);"><td style="padding: 10px; color: var(--white); font-weight: 500;"><span style="margin-right:5px;">${l.teamIcon}</span> ${l.teamName}</td><td style="padding: 10px; color: var(--text2);">${l.druTarget}</td><td style="padding: 10px; color: var(--cyan); font-weight:bold;">${l.druAchieved}</td><td style="padding: 10px; color: var(--text2);">₹${l.dprTarget.toLocaleString('en-IN')}</td><td style="padding: 10px; color: var(--green); font-weight:bold;">₹${l.collected.toLocaleString('en-IN')}</td><td style="padding: 10px;">${druBtn} ${dprBtn}</td><td style="padding: 10px; text-align: right;"><button class="del-btn" onclick="deleteDruLog('${l.id}')">✕</button></td></tr>`;
+  }).join('');
+}
+
+// --- TAB 3: FUNNEL BREAKDOWN ---
+function renderFunnel() {
+  const autoContainer = document.getElementById('auto-pipeline-stats');
+  const selectedDate = document.getElementById('report-date').value;
+  const dailyLeads = globalLeads.filter(log => log.date === selectedDate);
+
+  const tPros = dailyLeads.filter(l => l.type === 'Prospect').length; 
+  const tFol = dailyLeads.filter(l => l.type === 'Follow-up').length; 
+  const tDone = dailyLeads.filter(l => l.status === 'Done').length; 
+  const tLost = dailyLeads.filter(l => l.status === 'Negative').length;
+  
+  if (autoContainer) {
+    autoContainer.innerHTML = `<div class="metric-card"><div class="metric-label">Logged Prospects</div><div class="metric-val" style="color:var(--cyan);">${tPros}</div></div><div class="metric-card"><div class="metric-label">Logged Follow-Ups</div><div class="metric-val" style="color:var(--amber);">${tFol}</div></div><div class="metric-card"><div class="metric-label">Done (Won)</div><div class="metric-val" style="color:var(--green);">${tDone}</div></div><div class="metric-card"><div class="metric-label">Negative (Lost)</div><div class="metric-val" style="color:var(--red);">${tLost}</div></div><div class="metric-card" style="grid-column: span 2;"><div class="metric-label">Automated Win Rate</div><div class="metric-val">${(tPros+tFol+tDone+tLost)>0 ? Math.round((tDone/(tPros+tFol+tDone+tLost))*100) : 0}%</div></div>`;
+  }
+
+  const teamTable = document.getElementById('team-wise-pipeline-body');
+  if (teamTable) {
+    if (dailyLeads.length === 0) teamTable.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:20px; color:var(--text3);">No leads logged for ${selectedDate}.</td></tr>`;
+    else teamTable.innerHTML = eodData.teams.map(t => {
+      const lds = dailyLeads.filter(l => l.teamId === t.id); if(lds.length === 0) return '';
+      return `<tr style="border-bottom: 1px solid var(--border);"><td style="padding: 10px; color: var(--white); font-weight: 600;"><span style="margin-right:5px;">${t.icon}</span>${t.name}</td><td style="padding: 10px; color: var(--cyan); font-weight:bold;">${lds.filter(l => l.type === 'Prospect').length}</td><td style="padding: 10px; color: var(--amber); font-weight:bold;">${lds.filter(l => l.type === 'Follow-up').length}</td><td style="padding: 10px; color: var(--green); font-weight:bold;">${lds.filter(l => l.status === 'Done').length}</td><td style="padding: 10px; color: var(--red); font-weight:bold;">${lds.filter(l => l.status === 'Negative').length}</td></tr>`;
+    }).join('');
+  }
+
+  const visContainer = document.getElementById('funnel-vis');
+  const tableBody = document.getElementById('funnel-body');
+  
+  if (state.funnel.length === 0) {
+    if(visContainer) visContainer.innerHTML = '<p style="text-align:center; color:var(--text3); font-size:13px; padding:20px;">No stages added manually yet.</p>';
+    if(tableBody) tableBody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px; color:var(--text3);">No data</td></tr>';
+    return;
+  }
+
+  const maxCount = Math.max(...state.funnel.map(r => r.count), 1);
+
+  if(visContainer) {
+    visContainer.innerHTML = state.funnel.map((r, i) => {
+      const pct = Math.round((r.count / maxCount) * 100);
+      const prev = state.funnel[i - 1];
+      let dropHtml = '';
+      if (prev && prev.count > 0) {
+        const drop = Math.round(((prev.count - r.count) / prev.count) * 100);
+        const badgeClass = drop > 40 ? 'badge-red' : drop > 20 ? 'badge-amber' : 'badge-green';
+        dropHtml = `<div class="funnel-drop"><span class="badge-pill ${badgeClass}">${drop}% drop-off</span></div>`;
+      }
+      return `<div class="funnel-stage"><div class="funnel-row"><div class="funnel-name">${r.stage}</div><div class="funnel-bar-bg"><div class="funnel-bar-fill" style="width:${pct}%"></div></div><div class="funnel-count">${r.count}</div></div>${dropHtml}</div>`;
+    }).join('');
+  }
+
+  if(tableBody) {
+    tableBody.innerHTML = state.funnel.map((r, i) => {
+      const prev = state.funnel[i - 1];
+      let dropCell = '—';
+      if (prev && prev.count > 0) {
+        const drop = Math.round(((prev.count - r.count) / prev.count) * 100);
+        const badgeClass = drop > 40 ? 'badge-red' : drop > 20 ? 'badge-amber' : 'badge-green';
+        dropCell = `<span class="badge-pill ${badgeClass}">${drop}%</span>`;
+      }
+      return `<tr style="border-bottom: 1px solid var(--border);"><td style="padding: 10px; color: var(--white); font-weight: 500;">${r.stage}</td><td style="padding: 10px; color: var(--text2);">${r.count}</td><td style="padding: 10px;">${dropCell}</td><td style="padding: 10px; color: var(--text2);">${r.issue || '—'}</td><td style="padding: 10px; color: var(--text2);">${r.owner || '—'}</td><td style="padding: 10px; text-align: right;"><button class="del-btn" onclick="deleteFunnel(${i})">✕</button></td></tr>`;
+    }).join('');
+  }
+}
+
+function addFunnelRow() {
+  const stage = getStr('f-stage'), count = getNum('f-count');
+  if (!stage) return alert('Please enter a stage name.');
+  state.funnel.push({ stage, count, issue: getStr('f-issue'), owner: getStr('f-owner') });
+  document.getElementById('f-stage').value = ''; document.getElementById('f-count').value = '';
+  document.getElementById('f-issue').value = ''; document.getElementById('f-owner').value = '';
+  renderFunnel();
+}
+function deleteFunnel(index) { state.funnel.splice(index, 1); renderFunnel(); }
